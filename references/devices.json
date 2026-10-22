@@ -1,0 +1,36 @@
+{
+  "note": "Representative CSS-pixel profiles, not an exhaustive device matrix. Test breakpoint edges first; use these for realistic viewport, DPR, touch, and user-agent coverage. Source of truth is scripts/devices.mjs.",
+  "groups": {
+    "phone": ["phone-se", "phone-ios-se3", "phone-android-compact", "phone-android", "phone-ios", "phone-pixel", "phone-ios-max"],
+    "foldable": ["foldable-cover", "foldable-open"],
+    "tablet": ["tablet-ipad-mini", "tablet-android", "tablet-ipad-air", "tablet-ipad-pro"],
+    "mobile": ["phone", "tablet", "foldable"],
+    "laptop": ["laptop-1280", "laptop-1366", "laptop-mac", "laptop-win-hidpi"],
+    "desktop": ["desktop-1920", "desktop-2560", "ultrawide-3440"],
+    "tv": ["tv-720", "tv-1080"]
+  },
+  "profiles": [
+    { "name": "phone-se", "label": "iPhone SE (1st gen)", "group": "phone", "os": "ios", "width": 320, "height": 568, "dpr": 2, "touch": true },
+    { "name": "phone-ios-se3", "label": "iPhone SE (2nd/3rd gen)", "group": "phone", "os": "ios", "width": 375, "height": 667, "dpr": 2, "touch": true },
+    { "name": "phone-android-compact", "label": "Android compact phone", "group": "phone", "os": "android", "width": 360, "height": 640, "dpr": 3, "touch": true },
+    { "name": "phone-android", "label": "Android phone (360)", "group": "phone", "os": "android", "width": 360, "height": 800, "dpr": 3, "touch": true },
+    { "name": "phone-ios", "label": "iPhone 14/15", "group": "phone", "os": "ios", "width": 390, "height": 844, "dpr": 3, "touch": true },
+    { "name": "phone-pixel", "label": "Google Pixel 8", "group": "phone", "os": "android", "width": 412, "height": 915, "dpr": 2.625, "touch": true },
+    { "name": "phone-ios-max", "label": "iPhone Pro Max", "group": "phone", "os": "ios", "width": 430, "height": 932, "dpr": 3, "touch": true },
+    { "name": "foldable-cover", "label": "Foldable cover screen", "group": "foldable", "os": "android", "width": 344, "height": 882, "dpr": 2.5, "touch": true },
+    { "name": "foldable-open", "label": "Foldable inner screen", "group": "foldable", "os": "android", "width": 884, "height": 1104, "dpr": 2.5, "touch": true },
+    { "name": "tablet-ipad-mini", "label": "iPad mini", "group": "tablet", "os": "ios", "width": 768, "height": 1024, "dpr": 2, "touch": true },
+    { "name": "tablet-android", "label": "Android tablet", "group": "tablet", "os": "android", "width": 800, "height": 1280, "dpr": 2, "touch": true },
+    { "name": "tablet-ipad-air", "label": "iPad Air", "group": "tablet", "os": "ios", "width": 820, "height": 1180, "dpr": 2, "touch": true },
+    { "name": "tablet-ipad-pro", "label": "iPad Pro 12.9", "group": "tablet", "os": "ios", "width": 1024, "height": 1366, "dpr": 2, "touch": true },
+    { "name": "laptop-1280", "label": "Small laptop (1280x720)", "group": "laptop", "os": "windows", "width": 1280, "height": 720, "dpr": 1, "touch": false },
+    { "name": "laptop-1366", "label": "Common Windows laptop", "group": "laptop", "os": "windows", "width": 1366, "height": 768, "dpr": 1, "touch": false },
+    { "name": "laptop-mac", "label": "MacBook Air", "group": "laptop", "os": "macos", "width": 1440, "height": 900, "dpr": 2, "touch": false },
+    { "name": "laptop-win-hidpi", "label": "Windows 150% scaling", "group": "laptop", "os": "windows", "width": 1536, "height": 864, "dpr": 1.25, "touch": false },
+    { "name": "desktop-1920", "label": "1080p desktop", "group": "desktop", "os": "windows", "width": 1920, "height": 1080, "dpr": 1, "touch": false },
+    { "name": "desktop-2560", "label": "QHD desktop", "group": "desktop", "os": "windows", "width": 2560, "height": 1440, "dpr": 1, "touch": false },
+    { "name": "ultrawide-3440", "label": "Ultrawide monitor", "group": "desktop", "os": "windows", "width": 3440, "height": 1440, "dpr": 1, "touch": false },
+    { "name": "tv-720", "label": "HD TV (1280x720)", "group": "tv", "os": "tv", "width": 1280, "height": 720, "dpr": 1, "touch": false },
+    { "name": "tv-1080", "label": "Full HD TV (1920x1080)", "group": "tv", "os": "tv", "width": 1920, "height": 1080, "dpr": 1, "touch": false }
+  ]
+}

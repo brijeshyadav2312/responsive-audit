@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Scroll reveal fixture</title>
+    <style>
+      body { margin: 0; font: 16px/1.5 system-ui, sans-serif; }
+      .spacer { height: 1600px; }
+      .reveal { opacity: 0; transition: opacity 0.15s; }
+      .reveal.in { opacity: 1; }
+      .reveal button { width: 20px; height: 20px; }
+    </style>
+  </head>
+  <body>
+    <div class="spacer"></div>
+    <div class="reveal"><button type="button">Go</button></div>
+    <script>
+      const reveal = document.querySelector('.reveal');
+      const observer = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('in');
+            observer.disconnect();
+          }
+        }
+      });
+      observer.observe(reveal);
+    </script>
+  </body>
+</html>

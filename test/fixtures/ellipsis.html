@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ellipsis fixture</title>
+    <style>
+      body { margin: 8px; font: 16px/1.5 system-ui, sans-serif; }
+      #ellipsis { width: 120px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+      #clip { width: 120px; overflow: hidden; white-space: nowrap; }
+    </style>
+  </head>
+  <body>
+    <div id="ellipsis">This text truncates with an ellipsis on purpose</div>
+    <div id="clip">This text is silently cut off without any ellipsis</div>
+  </body>
+</html>

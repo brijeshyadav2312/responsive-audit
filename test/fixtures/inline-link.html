@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Inline link fixture</title>
+    <style>
+      body { margin: 0; font: 16px/1.5 system-ui, sans-serif; }
+      main { padding: 16px; }
+      p { max-width: 320px; }
+      a { color: #4f46e5; }
+      .contact a { display: block; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p>
+        This is a long sentence with a normal
+        <a href="#details">inline documentation link</a>
+        inside it. Inline links inside prose are allowed to be smaller than standalone
+        controls, so the audit must not report this as a tap target failure.
+      </p>
+      <p class="contact"><a href="mailto:test@example.com">test@example.com</a></p>
+      <p class="contact"><a href="tel:+15550100">+1 555 0100</a></p>
+    </main>
+  </body>
+</html>

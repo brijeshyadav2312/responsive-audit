@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Motion overflow fixture</title>
+    <style>
+      body { margin: 0; overflow-x: hidden; font: 16px/1.5 system-ui, sans-serif; }
+      #shifted { width: 320px; margin: 16px; background: #ddd; }
+      @media (prefers-reduced-motion: no-preference) {
+        html.loaded #shifted { transform: translateX(100px); }
+      }
+    </style>
+    <script>
+      if (window.innerWidth < 600) document.documentElement.classList.add('loaded');
+    </script>
+  </head>
+  <body>
+    <div id="shifted">Reveal content starts outside the viewport on narrow screens.</div>
+  </body>
+</html>

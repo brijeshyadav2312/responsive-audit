@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Clean fixture</title>
+    <style>
+      * { box-sizing: border-box; }
+      body { margin: 0; font: 16px/1.5 system-ui, sans-serif; color: #111; background: #fff; }
+      header { position: sticky; top: 0; display: flex; align-items: center; justify-content: space-between; height: 64px; padding: 0 16px; background: #fff; border-bottom: 1px solid #ddd; }
+      nav { display: flex; gap: 8px; }
+      nav a { display: flex; align-items: center; justify-content: center; min-width: 48px; min-height: 48px; padding: 0 12px; color: #111; }
+      main { padding: 16px; max-width: 960px; margin: 0 auto; }
+      img { display: block; width: 300px; height: 200px; object-fit: cover; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <strong>Brand</strong>
+      <nav>
+        <a href="#one">One</a>
+        <a href="#two">Two</a>
+      </nav>
+    </header>
+    <main id="one">
+      <h1>Clean responsive page</h1>
+      <p id="two">
+        This paragraph is intentionally long enough to include a normal inline link in the
+        middle of a sentence, which should not be reported as a tiny tap target by the audit.
+        <a href="#two">inline link</a>
+      </p>
+      <img
+        alt="Preview"
+        src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='800'%20height='400'%3E%3Crect%20width='800'%20height='400'%20fill='%236366f1'/%3E%3C/svg%3E"
+      />
+    </main>
+  </body>
+</html>

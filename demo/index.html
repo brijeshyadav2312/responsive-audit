@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>responsive-audit demo</title>
+    <style>
+      :root {
+        --ink: #101828;
+        --muted: #667085;
+        --line: #e4e7ec;
+        --brand: #4f46e5;
+        --bg: #f8fafc;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        color: var(--ink);
+        background: var(--bg);
+      }
+
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: #fff;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .shell {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 0 16px;
+      }
+
+      header .shell {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 64px;
+      }
+
+      .brand {
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+
+      nav {
+        display: flex;
+        gap: 18px;
+      }
+
+      nav a {
+        color: var(--muted);
+        text-decoration: none;
+        font-size: 12px;
+        line-height: 1;
+      }
+
+      .icon-btn {
+        width: 20px;
+        height: 20px;
+        padding: 0;
+        border: 1px solid var(--line);
+        background: #fff;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      main {
+        padding: 24px 0 96px;
+      }
+
+      h1 {
+        font-size: 32px;
+        line-height: 1.15;
+        letter-spacing: -0.03em;
+        margin: 24px 0 8px;
+      }
+
+      .lede {
+        color: var(--muted);
+        max-width: 60ch;
+        margin: 0;
+      }
+
+      .hero-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 320px);
+        gap: 16px;
+        margin-top: 24px;
+      }
+
+      .card {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 16px;
+      }
+
+      .card h2 {
+        font-size: 16px;
+        margin: 0 0 8px;
+      }
+
+      .card p {
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.5;
+        margin: 0 0 12px;
+      }
+
+      .badge {
+        width: 140px;
+        height: 22px;
+        overflow: hidden;
+        white-space: nowrap;
+        background: #eef2ff;
+        color: var(--brand);
+        border-radius: 6px;
+        padding: 3px 6px;
+        font-size: 11px;
+      }
+
+      .media {
+        width: 100%;
+        height: 120px;
+        object-fit: fill;
+        display: block;
+        border-radius: 8px;
+        margin-bottom: 12px;
+      }
+
+      .tablet-banner {
+        display: none;
+        position: absolute;
+        top: 720px;
+        left: 780px;
+        width: 180px;
+        height: 80px;
+        padding: 8px;
+        background: #fee4e2;
+        border: 1px solid #fda29b;
+        border-radius: 8px;
+        font-size: 11px;
+      }
+
+      .cookie {
+        display: none;
+      }
+
+      .cookie button {
+        margin-top: 12px;
+        padding: 10px 16px;
+        border: 0;
+        border-radius: 8px;
+        background: #fff;
+        color: #111827;
+        font-weight: 600;
+      }
+
+      @media (max-width: 1024px) {
+        .hero-grid {
+          grid-template-columns: repeat(2, 320px);
+        }
+      }
+
+      @media (max-width: 640px) {
+        .hero-grid {
+          display: block;
+        }
+
+        .card {
+          margin-bottom: 12px;
+        }
+      }
+
+      @media (min-width: 768px) and (max-width: 900px) {
+        .tablet-banner {
+          display: block;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .cookie {
+          display: block;
+          position: fixed;
+          inset: auto 0 0 0;
+          height: 48vh;
+          padding: 16px;
+          background: #111827;
+          color: #fff;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="shell">
+        <span class="brand">Acme Analytics</span>
+        <nav>
+          <a href="#product">Product</a>
+          <a href="#pricing">Pricing</a>
+          <a href="#docs">Docs</a>
+          <button class="icon-btn" aria-label="Open menu"></button>
+        </nav>
+      </div>
+    </header>
+
+    <main class="shell">
+      <h1>Ship dashboards that survive every screen</h1>
+      <p class="lede">
+        This page intentionally contains responsive defects so you can see what the audit
+        detects at each breakpoint edge.
+      </p>
+
+      <section class="hero-grid" id="product">
+        <article class="card">
+          <img
+            class="media"
+            alt="Product preview"
+            src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='800'%20height='400'%3E%3Crect%20width='800'%20height='400'%20fill='%236366f1'/%3E%3Ctext%20x='400'%20y='215'%20font-size='44'%20fill='white'%20text-anchor='middle'%20font-family='sans-serif'%3E800%20x%20400%3C/text%3E%3C/svg%3E"
+          />
+          <h2>Realtime metrics</h2>
+          <p>Track active users, conversion, and latency without refreshing the page.</p>
+          <div class="badge">Enterprise-grade responsive verification pipeline</div>
+        </article>
+
+        <article class="card">
+          <h2>Breakpoint alerts</h2>
+          <p>Get notified the moment a layout overflows, clips, or collapses.</p>
+          <a href="#pricing">See pricing</a>
+        </article>
+
+        <article class="card">
+          <h2>Evidence first</h2>
+          <p>Every finding ships with a selector, a rectangle, and a screenshot.</p>
+          <a href="#docs">Read the docs</a>
+        </article>
+      </section>
+
+      <section class="card" id="pricing" style="margin-top: 24px">
+        <h2>Pricing</h2>
+        <p>
+          Fixed-width grids, tiny tap targets, clipped labels, and stretched images are the
+          four most common responsive regressions shipped by AI-generated UI.
+        </p>
+        <p>
+          The audit reports each of them with a reproducible selector so an agent can patch
+          the exact element instead of guessing.
+        </p>
+      </section>
+
+      <section class="card" id="docs" style="margin-top: 16px">
+        <h2>Docs</h2>
+        <p>
+          Run the CLI, open report.md, fix the P0 findings first, then re-run. The score
+          should move at every pass.
+        </p>
+      </section>
+
+      <div class="tablet-banner">This banner only exists between 768px and 900px.</div>
+
+      <div class="cookie">
+        <strong>We value your privacy</strong>
+        <p>This deliberately oversized overlay hides half the screen on phones.</p>
+        <button type="button">Accept all</button>
+      </div>
+    </main>
+  </body>
+</html>

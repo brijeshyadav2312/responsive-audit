@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Safe area fixture</title>
+    <style>
+      body { margin: 0; padding: 80px 16px; font: 16px/1.5 system-ui, sans-serif; }
+      header, footer { position: fixed; left: 0; right: 0; height: 64px; display: flex; align-items: center; padding: 0 16px; background: #111; color: #fff; }
+      header { top: 0; }
+      footer { bottom: 0; }
+    </style>
+  </head>
+  <body>
+    <header>Top bar</header>
+    <p>Content between a fixed header and footer without safe-area insets.</p>
+    <footer>Bottom bar</footer>
+  </body>
+</html>

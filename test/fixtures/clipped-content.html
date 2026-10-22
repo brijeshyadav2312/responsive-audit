@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Clipped content fixture</title>
+    <style>
+      body { margin: 0; overflow-x: hidden; font: 16px/1.5 system-ui, sans-serif; }
+      .card { width: 280px; margin: 16px; overflow: hidden; background: #eee; }
+      #clip { width: 420px; background: #ddd; }
+      .fine { margin: 16px; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <p id="clip">This card hides content that is wider than its clipping box.</p>
+    </div>
+    <p class="fine">This paragraph fits inside the viewport.</p>
+  </body>
+</html>

@@ -1,0 +1,81 @@
+{
+  "skill": "responsive-audit",
+  "version": "0.2.0",
+  "cases": [
+    {
+      "id": "trigger-breakpoint-search",
+      "prompt": "Find where my landing page breaks on mobile.",
+      "should_trigger": true
+    },
+    {
+      "id": "trigger-breakpoint-edges",
+      "prompt": "Audit this React app at every breakpoint and tell me what overflows.",
+      "should_trigger": true
+    },
+    {
+      "id": "trigger-tablet-coverage",
+      "prompt": "Does my layout hold up on iPad and Android tablets?",
+      "should_trigger": true
+    },
+    {
+      "id": "trigger-pr-gate",
+      "prompt": "Check this page for responsive regressions before I merge.",
+      "should_trigger": true
+    },
+    {
+      "id": "trigger-device-matrix",
+      "prompt": "Test my portfolio on iPhone, a foldable, and TV screen sizes.",
+      "should_trigger": true
+    },
+    {
+      "id": "trigger-specific-width",
+      "prompt": "Something is cut off at 768px on my site. Find the element.",
+      "should_trigger": true
+    },
+    {
+      "id": "trigger-ci-failure",
+      "prompt": "Gate CI on P0 responsive failures in this app.",
+      "should_trigger": true
+    },
+    {
+      "id": "trigger-ai-ui-check",
+      "prompt": "Verify the AI-generated dashboard is responsive on phones.",
+      "should_trigger": true
+    },
+    {
+      "id": "non-trigger-a11y",
+      "prompt": "Fix my site's alt text and color contrast.",
+      "should_trigger": false
+    },
+    {
+      "id": "non-trigger-visual-regression",
+      "prompt": "Capture a visual regression screenshot against the baseline.",
+      "should_trigger": false
+    },
+    {
+      "id": "non-trigger-performance",
+      "prompt": "Why is my Lighthouse performance score low?",
+      "should_trigger": false
+    },
+    {
+      "id": "non-trigger-e2e",
+      "prompt": "Set up Playwright to run my end-to-end checkout test.",
+      "should_trigger": false
+    },
+    {
+      "id": "non-trigger-security",
+      "prompt": "Audit my API for SQL injection.",
+      "should_trigger": false
+    },
+    {
+      "id": "non-trigger-motion",
+      "prompt": "Make my CSS animations smoother.",
+      "should_trigger": false
+    },
+    {
+      "id": "non-trigger-dark-mode",
+      "prompt": "Check whether dark mode text meets contrast requirements.",
+      "should_trigger": false
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "name": "responsive-audit",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Agent skill + CLI that audits UI responsiveness at breakpoint edges and across device profiles using deterministic DOM evidence.",
+  "bin": {
+    "responsive-audit": "./scripts/cli.mjs"
+  },
+  "scripts": {
+    "audit": "node scripts/cli.mjs",
+    "demo": "node scripts/cli.mjs demo/index.html --full",
+    "demo:devices": "node scripts/cli.mjs demo/index.html --mode devices --devices mobile --shots all",
+    "audit:full": "node scripts/cli.mjs demo/index.html --mode all --shots all",
+    "devices": "node scripts/cli.mjs --list-devices",
+    "validate": "node scripts/validate-skill.mjs",
+    "test": "node --test test/*.test.mjs",
+    "start": "node scripts/cli.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "playwright": "^1.64.1"
+  }
+}

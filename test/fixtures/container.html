@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Container fixture</title>
+    <style>
+      body { margin: 0; font: 16px/1.5 system-ui, sans-serif; }
+      .wrap { container-type: inline-size; }
+      .box { padding: 16px; }
+      @container (width >= 400px) { .box { color: #4f46e5; } }
+      @media (min-width: 48em) { .box { background: #eef2ff; } }
+      @media (400px <= width <= 700px) { .box { border: 1px solid #ccc; } }
+      @media (max-height: 500px) { .box { background: #eee; } }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="box" id="box">Container and range-syntax media queries.</div>
+    </div>
+  </body>
+</html>
