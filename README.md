@@ -15,52 +15,65 @@ Most tools test a handful of arbitrary widths and take screenshots. This one:
 
 Layouts do not break at `375px`. They break when a media query flips. Testing `b-1 / b / b+1` finds the exact pixel where the layout dies, which is what you actually want to fix. Device profiles then confirm that the fix survives realistic UA, DPR, touch, and orientation combinations.
 
+## Requirements
+
+- Node.js 20 or newer
+- Git
+- About 350 MB of free disk space for the Playwright Chromium download
+
 ## Install
 
 ```bash
+git clone https://github.com/brijeshyadav2312/responsive-audit.git
+cd responsive-audit
 npm install
 npx playwright install chromium
 ```
 
+`npm install` at the repository root installs the workspace that contains the skill and CLI.
+
 No browser download? The CLI auto-falls back to an installed Chrome or Edge. You can be explicit:
 
 ```bash
-node scripts/cli.mjs http://localhost:3000 --channel chrome
-node scripts/cli.mjs http://localhost:3000 --channel msedge
+node skills/responsive-audit/scripts/cli.mjs http://localhost:3000 --channel chrome
+node skills/responsive-audit/scripts/cli.mjs http://localhost:3000 --channel msedge
 ```
 
 For Safari-sensitive work:
 
 ```bash
 npx playwright install webkit
-node scripts/cli.mjs http://localhost:3000 --engine webkit --devices phone
+node skills/responsive-audit/scripts/cli.mjs http://localhost:3000 --engine webkit --devices phone
 ```
 
 ## Quick start
 
+The bundled demo page intentionally contains responsive defects so you can see what the
+audit detects. A grade of C on `skills/responsive-audit/demo/index.html` is expected.
+
 ```bash
 # local file or URL
-node scripts/cli.mjs demo/index.html --full
-node scripts/cli.mjs http://localhost:3000
+node skills/responsive-audit/scripts/cli.mjs skills/responsive-audit/demo/index.html --full
+node skills/responsive-audit/scripts/cli.mjs http://localhost:3000
 
 # realistic device matrix
-node scripts/cli.mjs http://localhost:3000 --mode devices --devices mobile
-node scripts/cli.mjs http://localhost:3000 --mode devices --devices tv
+node skills/responsive-audit/scripts/cli.mjs http://localhost:3000 --mode devices --devices mobile
+node skills/responsive-audit/scripts/cli.mjs http://localhost:3000 --mode devices --devices tv
 
 # both sweep and devices
-node scripts/cli.mjs http://localhost:3000 --mode all --shots all
+node skills/responsive-audit/scripts/cli.mjs http://localhost:3000 --mode all --shots all
 
 # only the widths you care about
-node scripts/cli.mjs http://localhost:3000 --widths 320,390,768,1024,1440
+node skills/responsive-audit/scripts/cli.mjs http://localhost:3000 --widths 320,390,768,1024,1440
 
 # trigger scroll-reveal and lazy content before measuring
-node scripts/cli.mjs http://localhost:3000 --scroll
+node skills/responsive-audit/scripts/cli.mjs http://localhost:3000 --scroll
 
 # audit the reduced-motion variant instead of the default normal-motion state
-node scripts/cli.mjs http://localhost:3000 --reduced-motion
+node skills/responsive-audit/scripts/cli.mjs http://localhost:3000 --reduced-motion
 
 # CI gate: exit 1 on any P0 or P1
-node scripts/cli.mjs http://localhost:3000 --fail-on P1
+node skills/responsive-audit/scripts/cli.mjs http://localhost:3000 --fail-on P1
 ```
 
 Output goes to `out/<timestamp>/`:
@@ -151,38 +164,63 @@ Every finding carries `{ selector, tag, text, rect }` so an agent can `document.
 
 ## Use as an agent skill
 
-Copy or symlink this folder into your agent's skills directory:
+Copy or symlink **`skills/responsive-audit`** into your agent's skills directory. Keep the
+folder name exactly `responsive-audit`; validators require it to match the skill name.
 
-```text
-Claude Code:   <project>/.claude/skills/responsive-audit/
-               ~/.claude/skills/responsive-audit/
-OpenCode:      ~/.config/opencode/skills/responsive-audit/
-Codex:         ~/.codex/skills/responsive-audit/
+| Tool | Project path | User path |
+|------|--------------|-----------|
+| Shared open-standard | `.agents/skills/` | `~/.agents/skills/` |
+| OpenCode | `.opencode/skills/` | `~/.config/opencode/skills/` |
+| Claude Code | `.claude/skills/` | `~/.claude/skills/` |
+| Codex | `.agents/skills/` | `~/.codex/skills/` |
+| Cursor | `.agents/skills/`, `.cursor/skills/` | - |
+| Kiro | `.kiro/skills/` | `~/.kiro/skills/` |
+| Antigravity | `.agents/skills/` | `~/.gemini/config/skills/` or `~/.gemini/antigravity-cli/skills/` |
+| Kimi Code | `.agents/skills/`, `.kimi-code/skills/` | `~/.kimi-code/skills/` |
+| Copilot / VS Code | `.agents/skills/`, `.claude/skills/`, `.github/skills/` | `~/.copilot/skills/` |
+
+Example for the shared project location:
+
+```bash
+mkdir -p .agents/skills
+cp -R skills/responsive-audit .agents/skills/
+cd .agents/skills/responsive-audit
+npm install
+npx playwright install chromium
 ```
 
-Then ask: *"audit responsiveness of localhost:3000 and fix the breakpoint failures."*
+OpenCode also supports custom roots through `skills.paths`. For a new session, ask:
+*"audit responsiveness of localhost:3000 and fix the breakpoint failures."*
 
-`SKILL.md` defines the workflow, tool priority, output contract, severity model, and autonomy rules. `evals/evals.json` contains trigger and non-trigger cases.
+`SKILL.md` defines the workflow, tool priority, output contract, severity model, and autonomy rules.
+`evals/evals.json` contains trigger and non-trigger cases.
 
 ## Architecture
 
 ```text
-scripts/cli.mjs           argument parsing, validation, exit codes
-scripts/audit.mjs         orchestration, modes, worker pool, screenshots
-scripts/browser.mjs       engine launch and Chromium channel fallback
-scripts/discover.mjs      CSSOM breakpoint parsing and width matrix
-scripts/scan-css.mjs      CSS feature facts for platform checks
-scripts/measure.mjs       in-page DOM measurement and all rules
-scripts/devices.mjs       profiles, groups, orientations, context options
-scripts/score.mjs         penalties, grades, unique findings
-scripts/report.mjs        ASCII markdown and JSON reports
-scripts/validate-skill.mjs frontmatter, references, devices, eval validation
+skills/responsive-audit/
+  SKILL.md                agent workflow, output contract, severity model
+  scripts/cli.mjs         argument parsing, validation, exit codes
+  scripts/audit.mjs       orchestration, modes, worker pool, screenshots
+  scripts/browser.mjs     engine launch and Chromium channel fallback
+  scripts/discover.mjs    CSSOM breakpoint parsing and width matrix
+  scripts/scan-css.mjs    CSS feature facts for platform checks
+  scripts/measure.mjs     in-page DOM measurement and all rules
+  scripts/devices.mjs     profiles, groups, orientations, context options
+  scripts/score.mjs       penalties, grades, unique findings
+  scripts/report.mjs      ASCII markdown and JSON reports
+  scripts/validate-skill.mjs frontmatter, references, devices, eval validation
+  references/             check matrix, devices, platforms, limits, report schema
+  evals/                  trigger and non-trigger cases
+  demo/                   intentionally broken demo page
+  test/                   unit, fixture, and CLI integration tests
 ```
 
 ## Development
 
 ```bash
 npm run validate
+npm run validate:skill
 npm test
 npm run demo
 npm run demo:devices
@@ -190,7 +228,9 @@ npm run audit:full
 npm run devices
 ```
 
-The test suite uses `node:test` with unit tests for discovery and devices, integration fixtures for every measurement rule, and CLI end-to-end tests. Fixtures live in `test/fixtures/`.
+The test suite uses `node:test` with unit tests for discovery and devices, integration fixtures
+for every measurement rule, and CLI end-to-end tests. Fixtures live in
+`skills/responsive-audit/test/fixtures/`.
 
 ## Design decisions
 
@@ -226,4 +266,4 @@ The test suite uses `node:test` with unit tests for discovery and devices, integ
 
 ## License
 
-MIT
+MIT (c) 2026 Brijesh Yadav

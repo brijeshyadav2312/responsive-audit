@@ -1,6 +1,10 @@
 ---
 name: responsive-audit
 description: Audit a web UI's responsiveness at breakpoint edges and across phone, tablet, foldable, laptop, desktop, and TV profiles using a deterministic Playwright harness. Use when asked to check responsive layout, find where a layout breaks, verify AI-generated UI, test mobile or tablet widths, check TV safe areas, or gate a PR on responsive regressions. Do not use for accessibility semantics, visual baselines, performance, or end-to-end behavior.
+license: MIT
+metadata:
+  author: Brijesh Yadav
+  version: 0.2.0
 ---
 
 # Responsive Audit
@@ -31,7 +35,8 @@ The harness discovers breakpoints from CSSOM, tests `b-1 / b / b+1`, scans devic
 2. **Playwright MCP** - only if the CLI cannot run; emulate viewports manually
 3. **Chrome DevTools MCP** - last resort; limited measurement, no report
 
-If the CLI is missing, run `npm install` then `npx playwright install chromium`.
+Run the CLI from this skill directory. From the repository root, prefix paths with `skills/responsive-audit/`.
+If the CLI is missing, run `npm install` in this skill directory, then `npx playwright install chromium`.
 If the browser download is blocked, the CLI auto-falls back to installed Chrome or Edge, or pass `--channel chrome` / `--channel msedge`.
 If the app needs a dev server, start it and confirm the URL responds before auditing.
 
