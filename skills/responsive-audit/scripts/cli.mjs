@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
-import { runAudit } from './audit.mjs';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { runAudit, WAIT_IMAGES } from './audit.mjs';
 import { printSummary } from './report.mjs';
 import { PROFILES, getProfiles, listGroups } from './devices.mjs';
 
 const VERSION = JSON.parse(
-  readFileSync(new URL('../package.json', import.meta.url), 'utf8')
+  readFileSync(new URL('../package.json', import.meta.url), 'utf8').replace(/^\uFEFF/, '')
 ).version;
 const SEVERITIES = ['P0', 'P1', 'P2', 'P3'];
 const MODES = ['sweep', 'devices', 'all'];
@@ -25,12 +25,14 @@ Options:
   --mode <name>          sweep | devices | all (default: sweep)
   --devices <group>      all | web | mobile | phone | tablet | foldable | laptop | desktop | tv
                          (default: web; TV profiles are opt-in)
-  --orientations <mode>  auto | portrait | landscape | both (default: auto)
+  --orientations <mode>  auto | portrait | landscape | both (default: both)
+                         auto = natural orientation, a faster partial pass
   --widths <list>        comma-separated widths, skips breakpoint discovery
   --engine <name>        chromium | webkit | firefox (default: chromium)
   --channel <name>       chromium channel: chrome | msedge (default: auto fallback)
   --concurrency <n>      parallel contexts (default: 4, max: 8)
   --shots <mode>         critical | all | none (default: critical)
+  --wait-images <mode>   visible | all | none (default: visible)
   --full                 screenshot every tested viewport
   --full-page            force full-page screenshots
   --scroll               scroll through the page before measuring (reveals lazy/animated content)
@@ -65,10 +67,11 @@ function parseArgs(argv) {
     failOn: 'NONE',
     mode: 'sweep',
     devices: 'web',
-    orientations: 'auto',
+    orientations: 'both',
     engine: 'chromium',
     concurrency: 4,
     shots: 'critical',
+    waitImages: 'visible',
     full: false,
     fullPage: false,
     scroll: false,
@@ -95,12 +98,14 @@ function parseArgs(argv) {
       case '--orientations':
         options.orientations = String(next() || '').toLowerCase();
         break;
-      case '--widths':
-        options.widths = String(next() || '')
+      case '--widths': {
+        const parsed = String(next() || '')
           .split(',')
           .map((value) => Number(value.trim()))
           .filter((value) => Number.isFinite(value) && value > 0);
+        options.widths = [...new Set(parsed)];
         break;
+      }
       case '--engine':
         options.engine = String(next() || '').toLowerCase();
         break;
@@ -112,6 +117,9 @@ function parseArgs(argv) {
         break;
       case '--shots':
         options.shots = String(next() || '').toLowerCase();
+        break;
+      case '--wait-images':
+        options.waitImages = String(next() || '').toLowerCase();
         break;
       case '--settle':
         options.settle = Number(next());
@@ -179,6 +187,9 @@ function validate(options) {
     problems.push('--orientations must be one of ' + ORIENTATIONS.join(', '));
   }
   if (!SHOTS.includes(options.shots)) problems.push('--shots must be one of ' + SHOTS.join(', '));
+  if (!WAIT_IMAGES.includes(options.waitImages)) {
+    problems.push('--wait-images must be one of ' + WAIT_IMAGES.join(', '));
+  }
   if (options.failOn !== 'NONE' && !SEVERITIES.includes(options.failOn)) {
     problems.push('--fail-on must be P0, P1, P2, P3, or none');
   }
@@ -188,6 +199,12 @@ function validate(options) {
   }
   if (!Number.isFinite(options.maxWidths) || options.maxWidths < 1) {
     problems.push('--max-widths must be >= 1');
+  }
+  if (options.widths && options.widths.length === 0) {
+    problems.push('--widths must contain at least one positive number');
+  }
+  if (options.widths && options.widths.some((width) => width > 10000)) {
+    problems.push('--widths values must be 10000 or less');
   }
   if (!Number.isFinite(options.concurrency)) options.concurrency = 4;
   options.concurrency = Math.max(1, Math.min(8, Math.floor(options.concurrency)));
@@ -208,9 +225,33 @@ function validate(options) {
 
 function resolveTarget(target) {
   if (/^https?:\/\//i.test(target)) return target;
+
+  if (/^file:\/\//i.test(target)) {
+    let absolute;
+    try {
+      absolute = fileURLToPath(target);
+    } catch {
+      console.error('Invalid file URL: ' + target);
+      process.exit(2);
+    }
+    if (!existsSync(absolute)) {
+      console.error('File not found: ' + absolute);
+      process.exit(2);
+    }
+    return pathToFileURL(absolute).href;
+  }
+
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(target)) {
+    console.error('Unsupported URL scheme. Use http://, https://, or a local file path.');
+    process.exit(2);
+  }
+
   const absolute = resolve(target);
   if (!existsSync(absolute)) {
-    console.error('File not found: ' + absolute);
+    console.error('Target not found: ' + absolute);
+    console.error(
+      'Pass an http(s) URL (for example http://localhost:3000) or an existing HTML file.'
+    );
     process.exit(2);
   }
   return pathToFileURL(absolute).href;
@@ -249,8 +290,23 @@ function printDevices() {
         .join(' ')
   );
   console.log('');
-  const example = getProfiles({ group: 'phone', orientations: 'both' });
-  console.log('Orientation expansion example (phone, both): ' + example.length + ' profiles');
+  const webBoth = getProfiles({ group: 'web', orientations: 'both' });
+  const webLandscape = webBoth.filter((profile) => profile.orientation === 'landscape');
+  const webAuto = getProfiles({ group: 'web', orientations: 'auto' });
+  console.log(
+    'Default audit expansion (web, both): ' +
+      webBoth.length +
+      ' profiles (' +
+      webLandscape.length +
+      ' landscape)'
+  );
+  console.log(
+    'Quick natural-orientation pass (web, auto): ' +
+      webAuto.length +
+      ' profiles (' +
+      webAuto.filter((profile) => profile.orientation === 'landscape').length +
+      ' landscape)'
+  );
   console.log('');
 }
 

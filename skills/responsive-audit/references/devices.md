@@ -40,15 +40,15 @@ The matrix favors breakpoint-adjacent and common real-world CSS widths over an e
 | `laptop` | four laptop profiles | 4 |
 | `desktop` | three desktop profiles | 3 |
 | `tv` | HD and Full HD | 2 |
-| `web` | everything except TV | 20 |
-| `all` | every profile | 22 |
+| `web` | everything except TV | 20 natural / 33 both |
+| `all` | every profile | 22 natural / 35 both |
 
-The CLI defaults to `web` (20 profiles). TV is opt-in with `--devices tv` or `--devices all`.
+The CLI defaults to `web` and `--orientations both` (33 profiles, 20 landscape). TV is opt-in with `--devices tv` or `--devices all`.
 
 ## Orientation
 
-- `auto` (default): portable profiles use portrait; laptops, desktops, and TVs use landscape.
-- `both`: portable profiles are tested in portrait and landscape. Each landscape variant gets a `-landscape` suffix. Non-portable profiles are not rotated.
+- `both` (default): portable profiles are tested in portrait and landscape. Each landscape variant gets a `-landscape` suffix. Non-portable profiles are not rotated. The default web audit therefore tests 33 profiles, 20 of them landscape.
+- `auto`: portable profiles use portrait only; laptops, desktops, and TVs use their natural landscape orientation. This is a faster, partial pass (20 web profiles, 7 landscape). Do not describe it as full landscape coverage.
 - `landscape`: portable profiles are rotated. Already-landscape profiles keep their dimensions.
 - `portrait`: portable profiles stay portrait. Non-portable profiles stay in their natural landscape orientation.
 

@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PROFILES } from './devices.mjs';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const errors = [];
+let skillVersion = null;
+let packageVersion = null;
+let evalsVersion = null;
 
 function read(relative) {
   const absolute = join(root, relative);
@@ -13,7 +16,25 @@ function read(relative) {
     errors.push('Missing file: ' + relative);
     return null;
   }
-  return readFileSync(absolute, 'utf8');
+  return readFileSync(absolute, 'utf8').replace(/^\uFEFF/, '');
+}
+
+if (basename(root) !== 'responsive-audit') {
+  errors.push('skill folder must be named "responsive-audit" (found "' + basename(root) + '")');
+}
+
+const packageJson = read('package.json');
+if (packageJson) {
+  try {
+    const parsed = JSON.parse(packageJson);
+    packageVersion = parsed.version || null;
+    if (parsed.name !== 'responsive-audit') {
+      errors.push('package.json name must be "responsive-audit"');
+    }
+    if (!packageVersion) errors.push('package.json is missing a version');
+  } catch (error) {
+    errors.push('package.json is not valid JSON: ' + error.message);
+  }
 }
 
 const skill = read('SKILL.md');
@@ -36,6 +57,17 @@ if (skill) {
     if (fields.description && fields.description.length > 1024) {
       errors.push('frontmatter description must be at most 1024 characters');
     }
+    const versionMatch = frontmatter[1].match(/^[ \t]+version:\s*(\S+)\s*$/m);
+    if (versionMatch) skillVersion = versionMatch[1];
+    if (packageVersion && skillVersion && packageVersion !== skillVersion) {
+      errors.push(
+        'SKILL.md metadata version ' +
+          skillVersion +
+          ' does not match package.json version ' +
+          packageVersion
+      );
+    }
+    if (!skillVersion) errors.push('SKILL.md metadata is missing a version');
   }
 
   const body = skill.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '');
@@ -75,6 +107,17 @@ if (devicesDoc) {
     for (const name of moduleNames) {
       if (!listedNames.has(name)) errors.push('devices.json is missing profile: ' + name);
     }
+    for (const [group, names] of Object.entries(parsed.groups || {})) {
+      if (!Array.isArray(names)) {
+        errors.push('devices.json group "' + group + '" must be an array');
+        continue;
+      }
+      for (const name of names) {
+        if (!moduleNames.has(name)) {
+          errors.push('devices.json group "' + group + '" lists unknown profile: ' + name);
+        }
+      }
+    }
   } catch (error) {
     errors.push('references/devices.json is not valid JSON: ' + error.message);
   }
@@ -84,7 +127,17 @@ const evalsDoc = read('evals/evals.json');
 if (evalsDoc) {
   try {
     const parsed = JSON.parse(evalsDoc);
+    evalsVersion = parsed.version || null;
     const cases = Array.isArray(parsed.cases) ? parsed.cases : [];
+    if (packageVersion && evalsVersion && packageVersion !== evalsVersion) {
+      errors.push(
+        'evals/evals.json version ' +
+          evalsVersion +
+          ' does not match package.json version ' +
+          packageVersion
+      );
+    }
+    if (!evalsVersion) errors.push('evals/evals.json is missing a version');
     if (cases.length < 8) errors.push('evals/evals.json needs at least 8 cases');
     if (!cases.some((item) => item.should_trigger === true)) {
       errors.push('evals/evals.json needs trigger cases');

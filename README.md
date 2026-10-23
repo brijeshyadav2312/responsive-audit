@@ -1,12 +1,22 @@
 # responsive-audit
 
-An agent skill and CLI that audits a web UI's responsiveness at **breakpoint edges** and across **realistic device profiles**, then reports deterministic evidence instead of vibes.
+[![CI](https://github.com/brijeshyadav2312/responsive-audit/actions/workflows/ci.yml/badge.svg)](https://github.com/brijeshyadav2312/responsive-audit/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Node.js 20+](https://img.shields.io/badge/node-20%2B-brightgreen.svg)](package.json)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![GitHub stars](https://img.shields.io/github/stars/brijeshyadav2312/responsive-audit?style=social)](https://github.com/brijeshyadav2312/responsive-audit/stargazers)
+
+**A responsive UI agent skill and responsive audit CLI.** Audit a responsive page at
+**breakpoint edges** and across **realistic device profiles**, then produce a deterministic
+**UI responsive report** with selectors, rects, severity, and screenshots instead of vibes.
+Use it as a **responsive UI skill**, **responsive agent skill**, or standalone Playwright
+CLI to find where a layout breaks and to gate PRs on responsiveness regressions.
 
 Most tools test a handful of arbitrary widths and take screenshots. This one:
 
 1. discovers real breakpoints from CSSOM, including range syntax, em/rem units, and container queries
 2. reloads a fresh page at each `breakpoint - 1`, `breakpoint`, `breakpoint + 1`, and representative device width
-3. optionally runs 22 device profiles with UA, DPR, touch, orientation, and safe-area checks
+3. runs 22 base device profiles with UA, DPR, touch, orientation, and safe-area checks (33 with both orientations)
 4. measures the DOM for overflow, ancestor clipping, fixed/sticky fit, layout-viewport expansion, tap targets, distortion, overlays, iOS input zoom, and TV rules
 5. captures annotated screenshots only for the viewports you ask for
 6. deduplicates findings by rule + selector, scores each viewport, and writes a report an agent can act on
@@ -14,6 +24,13 @@ Most tools test a handful of arbitrary widths and take screenshots. This one:
 ## Why breakpoint edges
 
 Layouts do not break at `375px`. They break when a media query flips. Testing `b-1 / b / b+1` finds the exact pixel where the layout dies, which is what you actually want to fix. Device profiles then confirm that the fix survives realistic UA, DPR, touch, and orientation combinations.
+
+## Who it is for
+
+- Frontend developers shipping responsive pages and design systems
+- Teams using AI coding agents (OpenCode, Claude Code, Codex, Cursor, Copilot, Kiro, Antigravity, Kimi Code)
+- QA engineers who need a repeatable UI responsive report instead of ad-hoc screenshots
+- Anyone debugging a layout that breaks between mobile and desktop breakpoints, or on foldables and TVs
 
 ## Requirements
 
@@ -90,7 +107,7 @@ shots/phone-ios.png    annotated evidence for device profiles
 | Mode | What runs | Use when |
 |------|-----------|----------|
 | `sweep` (default) | breakpoint edges + representative widths, each on a fresh page | finding the exact failing pixel |
-| `devices` | web profiles by default (20), with UA, DPR, touch, and orientation | checking phones, tablets, laptops, desktops |
+| `devices` | web profiles by default (33, including portable landscape), with UA, DPR, touch, and orientation | checking phones, tablets, laptops, desktops |
 | `all` | both, deduplicated in the report | release check |
 
 TV profiles are opt-in because most web targets do not ship to TVs. Add `--devices tv` or `--devices all` when TV is part of the target. Android phone/tablet web is included in `web`; Android TV is not unless you select `tv` or `all`.
@@ -101,12 +118,13 @@ TV profiles are opt-in because most web targets do not ship to TVs. Add `--devic
 |------|---------|---------|
 | `--mode <name>` | `sweep` | `sweep`, `devices`, or `all` |
 | `--devices <group>` | `web` | `all`, `web`, `mobile`, `phone`, `tablet`, `foldable`, `laptop`, `desktop`, `tv` |
-| `--orientations <mode>` | `auto` | `auto`, `portrait`, `landscape`, `both` |
+| `--orientations <mode>` | `both` | `auto`, `portrait`, `landscape`, `both`; `auto` is a faster natural-orientation pass |
 | `--widths <list>` | discovered | comma-separated widths, skips discovery |
 | `--engine <name>` | `chromium` | `chromium`, `webkit`, or `firefox` |
 | `--channel <name>` | auto | Chromium channel: `chrome` or `msedge` |
 | `--concurrency <n>` | `4` | parallel device contexts, clamped to 1-8 |
 | `--shots <mode>` | `critical` | `critical`, `all`, or `none` |
+| `--wait-images <mode>` | `visible` | `visible` waits for eager and in-viewport images; `all` waits for every image; `none` skips image waits |
 | `--full` | off | screenshot every tested viewport |
 | `--full-page` | off | force full-page screenshots |
 | `--scroll` | off | scroll the page before measuring to trigger reveal/lazy content |
@@ -151,7 +169,7 @@ Every finding carries `{ selector, tag, text, rect }` so an agent can `document.
 
 ## Device coverage
 
-22 profiles across phones, foldables, tablets, laptops, desktops, ultrawide, and TV. `web` is the default group and contains 20 profiles; TV is opt-in. Highlights:
+22 base profiles across phones, foldables, tablets, laptops, desktops, ultrawide, and TV. The default `web` audit expands portable profiles to both orientations, giving 33 profiles (20 landscape); TV is opt-in. A quick natural-orientation pass with `--orientations auto` uses 20 web profiles and skips portable landscape. Highlights:
 
 - 320, 344, 360, 375, 390, 412, 430 CSS px phones
 - foldable cover and inner screens
@@ -160,7 +178,7 @@ Every finding carries `{ selector, tag, text, rect }` so an agent can `document.
 - 1920, 2560, 3440 desktops
 - 1280x720 and 1920x1080 TV with 5% overscan heuristics
 
-`--orientations both` adds landscape variants for portable profiles. See `references/devices.md`.
+`--orientations both` is the default and adds landscape variants for portable profiles. Use `--orientations auto` only when a faster, partial pass is acceptable. See `references/devices.md`.
 
 ## Use as an agent skill
 
@@ -236,6 +254,9 @@ for every measurement rule, and CLI end-to-end tests. Fixtures live in
 
 - Overflow avoids scrollbar false positives by measuring `documentElement.clientWidth` and `visualViewport.width`.
 - Every sweep width gets a fresh page so AOS/scroll-reveal state from a larger width cannot mask a narrow-screen defect.
+- The default image wait skips offscreen lazy images. Those images cannot affect the current viewport and waiting for them previously forced a multi-second timeout on many pages. Use `--wait-images all` when strict image completion matters.
+- Sweep and device jobs share one worker pool so `--mode all` does not leave workers idle between phases.
+- Measurement caches layout facts and selectors per element, and tap-target spacing uses a spatial index. Large DOMs stay linear instead of scaling with repeated full scans.
 - Normal motion is the default; `--reduced-motion` is opt-in. Forcing reduced motion globally would hide transform-driven layout bugs.
 - Fixed/sticky elements are measured for viewport fit instead of being skipped; off-canvas drawers are excluded by intersection and clipping checks.
 - Ancestor clipping is measured only on visible content, ignoring scroll containers and intentional ellipsis/line-clamp truncation.
@@ -250,7 +271,7 @@ for every measurement rule, and CLI end-to-end tests. Fixtures live in
 - Cross-origin stylesheets are skipped during discovery; pass `--widths` if the site hides its CSS.
 - Canvas, WebGL, and cross-origin iframes cannot be measured from the DOM.
 - The audit sees one page state per navigation. Loading, empty, error, RTL, dark mode, and 200% zoom need separate runs.
-- Scroll-reveal, lazy-loaded, and infinite-scroll content may be hidden unless `--scroll` is used. The default run intentionally measures the pre-reveal state, which is what a user sees first; scroll-jacking pages can still defeat a revealed pass.
+- Scroll-reveal, lazy-loaded, and infinite-scroll content may be hidden unless `--scroll` is used. The default run intentionally measures the pre-reveal state, which is what a user sees first; scroll-jacking pages can still defeat a revealed pass. Offscreen `loading="lazy"` images are not awaited because they do not affect the current viewport; use `--wait-images all` or `--scroll` when their loaded state matters.
 - Animation state is sampled after `--settle`, not across every animation frame. A defect that exists for only a few milliseconds may not be captured.
 - It never claims a page is "fully responsive". It reports measured failures and their severity.
 
@@ -263,6 +284,24 @@ for every measurement rule, and CLI end-to-end tests. Fixtures live in
 - [ ] MCP server wrapper (`audit_responsive` tool)
 - [ ] State matrix: loading, empty, error, RTL, dark, 200% zoom
 - [ ] Optional real-device provider adapter
+
+## Feedback and ratings
+
+- Star this repo if it saves you a debugging session; stars are how other developers find it.
+- Rate the skill from 1-5 with the [feedback issue template](https://github.com/brijeshyadav2312/responsive-audit/issues/new?template=feedback.yml).
+- Report false positives, request device profiles, or ask usage questions in [issues](https://github.com/brijeshyadav2312/responsive-audit/issues).
+- Share the repo with your frontend or QA team.
+
+## Also known as
+
+Developers find this project by searching for: responsive UI skill, responsive UI agent
+skill, responsive agent skill, responsive page audit, UI responsiveness audit,
+responsiveness UI report, UI responsive report, responsive audit report, breakpoint
+testing, device-profile testing, Playwright responsive audit, and mobile/tablet/foldable/TV
+viewport testing.
+
+If you arrived from one of those searches, this is the repo. See the
+[agent skill installation matrix](#use-as-an-agent-skill) and the [quick start](#quick-start).
 
 ## License
 

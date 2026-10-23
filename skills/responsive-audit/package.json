@@ -1,8 +1,8 @@
 {
   "name": "responsive-audit",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
-  "description": "Agent skill + CLI that audits UI responsiveness at breakpoint edges and across device profiles using deterministic DOM evidence.",
+  "description": "Responsive UI agent skill + CLI: breakpoint-edge and device-profile responsive audits with deterministic UI responsive reports, annotated screenshots, and CI gating.",
   "license": "MIT",
   "author": {
     "name": "Brijesh Yadav",
@@ -19,14 +19,35 @@
   },
   "keywords": [
     "agent-skills",
+    "agent-skill",
+    "responsive-ui",
+    "responsive-ui-skill",
+    "responsive-agent-skill",
     "responsive-design",
     "responsive-layout",
-    "breakpoints",
+    "responsive-page",
+    "ui-responsiveness",
+    "responsive-audit",
+    "responsive-audit-report",
+    "ui-responsive-report",
+    "responsive-testing",
+    "breakpoint-testing",
+    "device-emulation",
     "playwright",
     "browser-automation",
+    "mobile-testing",
+    "tablet-testing",
+    "foldable",
+    "tv-testing",
+    "safe-area",
+    "tap-targets",
     "web-development",
-    "qa"
+    "qa",
+    "cli"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "bin": {
     "responsive-audit": "./scripts/cli.mjs"
   },
@@ -45,6 +66,7 @@
     "devices": "node scripts/cli.mjs --list-devices",
     "validate": "node scripts/validate-skill.mjs",
     "test": "node --test test/*.test.mjs",
+    "prepublishOnly": "npm run validate && npm test",
     "start": "node scripts/cli.mjs"
   },
   "engines": {

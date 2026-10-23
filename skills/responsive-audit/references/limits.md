@@ -19,7 +19,7 @@ The harness reports measured DOM and CSS facts. It does not prove a page is corr
 | Cross-origin CSS | discovery cannot read opaque stylesheets | pass `--widths` or move CSS same-origin |
 | Authentication and state | the audit sees one page state per navigation | use `--storage-state` and audit each state |
 | Loading, empty, error states | only the rendered state is measured | separate fixtures or controlled data |
-| Scroll-reveal and lazy content | reveal animations may hide below-fold elements before measurement; the default run deliberately samples that pre-reveal state | pass `--scroll` for a revealed pass; use a fixture if scroll-jacking prevents it |
+| Scroll-reveal and lazy content | reveal animations may hide below-fold elements before measurement; offscreen lazy images are not awaited by default | pass `--scroll` for a revealed pass and `--wait-images all` when loaded image state matters; use a fixture if scroll-jacking prevents it |
 | Animation timing | the audit samples after `--settle`, not every animation frame | increase `--settle` or add a deterministic fixture for a specific transition |
 | Reduced-motion comparison | normal motion is the default; `--reduced-motion` runs the opposite preference, not both in one run | run both modes and compare when motion changes layout |
 | Infinite scroll | the page keeps growing and the state is not deterministic | controlled fixture with a fixed dataset |
@@ -57,7 +57,7 @@ Ask the user before:
 
 Say:
 
-- "measured 320-3440px across 22 emulated profiles on Chromium"
+- "measured 320-3440px across 33 emulated web profiles on Chromium"
 - "P0 overflow at 768px in `.tablet-banner`"
 - "iOS input zoom is a static heuristic; verify on a physical iPhone"
 

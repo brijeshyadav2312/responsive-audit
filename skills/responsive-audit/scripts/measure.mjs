@@ -9,78 +9,145 @@ const MEASURE = ({ width, height, profile, cssFacts }) => {
   const touch = Boolean(profile && profile.touch) || (!profile && vw <= 900);
   const group = profile ? profile.group : null;
 
+  const styleCache = new WeakMap();
+  const rectCache = new WeakMap();
+  const selectorCache = new WeakMap();
+  const visibleCache = new WeakMap();
+  const laidOutCache = new WeakMap();
+  const opacityCache = new WeakMap();
+  const ignoredCache = new WeakMap();
+  const insideScrollerCache = new WeakMap();
+  const clippedByAncestorCache = new WeakMap();
+  const clippingAncestorCache = new WeakMap();
+  const proseLinkCache = new WeakMap();
+
+  const styleOf = (el) => {
+    let cs = styleCache.get(el);
+    if (!cs) {
+      cs = getComputedStyle(el);
+      styleCache.set(el, cs);
+    }
+    return cs;
+  };
+
+  const rawRectOf = (el) => {
+    let rect = rectCache.get(el);
+    if (!rect) {
+      rect = el.getBoundingClientRect();
+      rectCache.set(el, rect);
+    }
+    return rect;
+  };
+
   const uniqueSelector = (el) => {
     if (!el || el.nodeType !== 1) return '';
     if (el === body) return 'body';
+
+    const cached = selectorCache.get(el);
+    if (cached !== undefined) return cached;
+
+    const remember = (value) => {
+      selectorCache.set(el, value);
+      return value;
+    };
+
     if (!body || !body.contains(el)) {
       const tag = el.tagName.toLowerCase();
       if (el.id) {
         try {
           const idSel = '#' + CSS.escape(el.id);
-          if (document.querySelectorAll(idSel).length === 1) return idSel;
+          if (document.querySelectorAll(idSel).length === 1) return remember(idSel);
         } catch {
           // fall through
         }
       }
-      return tag;
+      return remember(tag);
     }
+
     if (el.id) {
       try {
         const idSel = '#' + CSS.escape(el.id);
-        if (document.querySelectorAll(idSel).length === 1) return idSel;
+        if (document.querySelectorAll(idSel).length === 1) return remember(idSel);
       } catch {
         // fall through
       }
     }
+
     const parts = [];
     let node = el;
     while (node && node.nodeType === 1 && node !== body) {
       const tag = node.tagName.toLowerCase();
-      const parent = node.parentElement;
-      if (!parent) break;
-      const siblings = Array.from(parent.children).filter(
-        (child) => child.tagName === node.tagName
-      );
-      parts.unshift(tag + ':nth-of-type(' + (siblings.indexOf(node) + 1) + ')');
-      node = parent;
+      if (!node.parentElement) break;
+      let index = 1;
+      for (
+        let sibling = node.previousElementSibling;
+        sibling;
+        sibling = sibling.previousElementSibling
+      ) {
+        if (sibling.tagName === node.tagName) index += 1;
+      }
+      parts.unshift(tag + ':nth-of-type(' + index + ')');
+      node = node.parentElement;
     }
-    return parts.length ? 'body > ' + parts.join(' > ') : 'body';
+    return remember(parts.length ? 'body > ' + parts.join(' > ') : 'body');
   };
 
   const isVisible = (el) => {
-    const cs = getComputedStyle(el);
+    const cached = visibleCache.get(el);
+    if (cached !== undefined) return cached;
+    const cs = styleOf(el);
     if (cs.display === 'none' || cs.visibility === 'hidden' || cs.contentVisibility === 'hidden') {
+      visibleCache.set(el, false);
       return false;
     }
-    if (Number(cs.opacity) < 0.02) return false;
-    const rect = el.getBoundingClientRect();
-    return rect.width > 0 && rect.height > 0;
+    if (Number(cs.opacity) < 0.02) {
+      visibleCache.set(el, false);
+      return false;
+    }
+    const rect = rawRectOf(el);
+    const visible = rect.width > 0 && rect.height > 0;
+    visibleCache.set(el, visible);
+    return visible;
   };
 
   const isLaidOut = (el) => {
-    const cs = getComputedStyle(el);
+    const cached = laidOutCache.get(el);
+    if (cached !== undefined) return cached;
+    const cs = styleOf(el);
     if (cs.display === 'none' || cs.visibility === 'hidden' || cs.contentVisibility === 'hidden') {
+      laidOutCache.set(el, false);
       return false;
     }
-    const rect = el.getBoundingClientRect();
-    return rect.width > 0 && rect.height > 0;
+    const rect = rawRectOf(el);
+    const laidOut = rect.width > 0 && rect.height > 0;
+    laidOutCache.set(el, laidOut);
+    return laidOut;
   };
 
   const effectiveOpacity = (el) => {
+    const cached = opacityCache.get(el);
+    if (cached !== undefined) return cached;
     let value = 1;
     let node = el;
     while (node && node !== root) {
-      value *= Number(getComputedStyle(node).opacity);
-      if (value < 0.02) return value;
+      value *= Number(styleOf(node).opacity);
+      if (value < 0.02) break;
       node = node.parentElement;
     }
+    opacityCache.set(el, value);
     return value;
   };
 
-  const isIgnored = (el) => Boolean(el.closest('[aria-hidden="true"], [inert]'));
+  const isIgnored = (el) => {
+    const cached = ignoredCache.get(el);
+    if (cached !== undefined) return cached;
+    const ignored = Boolean(el.closest('[aria-hidden="true"], [inert]'));
+    ignoredCache.set(el, ignored);
+    return ignored;
+  };
 
   const rectOf = (el) => {
-    const r = el.getBoundingClientRect();
+    const r = rawRectOf(el);
     return {
       x: Math.round(r.x),
       y: Math.round(r.y),
@@ -106,57 +173,99 @@ const MEASURE = ({ width, height, profile, cssFacts }) => {
   const scrollsX = (cs) => cs.overflowX === 'auto' || cs.overflowX === 'scroll';
 
   const insideScroller = (el) => {
+    const cached = insideScrollerCache.get(el);
+    if (cached !== undefined) return cached;
     let node = el.parentElement;
     while (node && node !== body) {
-      if (scrollsX(getComputedStyle(node))) return true;
+      if (scrollsX(styleOf(node))) {
+        insideScrollerCache.set(el, true);
+        return true;
+      }
       node = node.parentElement;
     }
+    insideScrollerCache.set(el, false);
     return false;
   };
 
   const clippedByAncestor = (el) => {
+    const cached = clippedByAncestorCache.get(el);
+    if (cached !== undefined) return cached;
     let node = el.parentElement;
     while (node && node !== body && node !== root) {
-      const cs = getComputedStyle(node);
-      if (scrollsX(cs)) return true;
+      const cs = styleOf(node);
+      if (scrollsX(cs)) {
+        clippedByAncestorCache.set(el, true);
+        return true;
+      }
       if (clipsX(cs)) {
-        const r = node.getBoundingClientRect();
-        if (r.right <= vw + 1 && r.left >= -1) return true;
+        const r = rawRectOf(node);
+        if (r.right <= vw + 1 && r.left >= -1) {
+          clippedByAncestorCache.set(el, true);
+          return true;
+        }
       }
       node = node.parentElement;
     }
+    clippedByAncestorCache.set(el, false);
     return false;
   };
 
-  const clippingAncestor = (el, rect) => {
+  const clippingAncestor = (el) => {
+    const cached = clippingAncestorCache.get(el);
+    if (cached !== undefined) return cached;
+    const rect = rawRectOf(el);
     let node = el.parentElement;
     while (node && node !== root) {
-      const cs = getComputedStyle(node);
-      if (scrollsX(cs)) return null;
+      const cs = styleOf(node);
+      if (scrollsX(cs)) {
+        clippingAncestorCache.set(el, null);
+        return null;
+      }
       if (clipsX(cs)) {
-        const box = node.getBoundingClientRect();
+        const box = rawRectOf(node);
         const left = box.left + node.clientLeft;
         const right = left + node.clientWidth;
         if (right - left > 1) {
           const leftAmount = Math.max(0, left - rect.left);
           const rightAmount = Math.max(0, rect.right - right);
           if (leftAmount > 6 || rightAmount > 6) {
-            return { node, left, right, amount: Math.round(Math.max(leftAmount, rightAmount)) };
+            const result = {
+              node,
+              left,
+              right,
+              amount: Math.round(Math.max(leftAmount, rightAmount)),
+            };
+            clippingAncestorCache.set(el, result);
+            return result;
           }
         }
       }
       node = node.parentElement;
     }
+    clippingAncestorCache.set(el, null);
     return null;
   };
 
   const isProseLink = (el) => {
-    if (el.tagName !== 'A') return false;
-    const cs = getComputedStyle(el);
-    if (cs.display !== 'inline') return false;
+    const cached = proseLinkCache.get(el);
+    if (cached !== undefined) return cached;
+    if (el.tagName !== 'A') {
+      proseLinkCache.set(el, false);
+      return false;
+    }
+    const cs = styleOf(el);
+    if (cs.display !== 'inline') {
+      proseLinkCache.set(el, false);
+      return false;
+    }
     const prose = el.closest('p, li, dd, dt, blockquote, figcaption, td');
-    if (!prose) return false;
-    return (el.innerText || '').trim().length > 0;
+    if (!prose) {
+      proseLinkCache.set(el, false);
+      return false;
+    }
+    const isProse = (el.innerText || '').trim().length > 0;
+    proseLinkCache.set(el, isProse);
+    return isProse;
   };
 
   let viewportFitCover = false;
@@ -244,7 +353,7 @@ const MEASURE = ({ width, height, profile, cssFacts }) => {
     const raw = [];
     for (const el of body.querySelectorAll('*')) {
       if (!isLaidOut(el) || isIgnored(el)) continue;
-      const rect = el.getBoundingClientRect();
+      const rect = rawRectOf(el);
       if (rect.right <= vw + 1 || rect.left >= vw) continue;
       if (clippedByAncestor(el)) continue;
       raw.push(el);
@@ -255,11 +364,11 @@ const MEASURE = ({ width, height, profile, cssFacts }) => {
       let el = original;
       let guard = 0;
       while (guard < 4) {
-        const cs = getComputedStyle(el);
+        const cs = styleOf(el);
         if (!cs.display.startsWith('inline')) break;
         const parent = el.parentElement;
         if (!parent || parent === body) break;
-        if (parent.getBoundingClientRect().right <= vw + 1) break;
+        if (rawRectOf(parent).right <= vw + 1) break;
         el = parent;
         guard += 1;
       }
@@ -280,7 +389,7 @@ const MEASURE = ({ width, height, profile, cssFacts }) => {
     const offenders = roots
       .map((el) => ({
         el,
-        rect: el.getBoundingClientRect(),
+        rect: rawRectOf(el),
         visible: effectiveOpacity(el) >= 0.02,
       }))
       .sort((a, b) => Number(b.visible) - Number(a.visible) || b.rect.right - a.rect.right)
@@ -321,10 +430,10 @@ const MEASURE = ({ width, height, profile, cssFacts }) => {
     if (fixedFit.length >= 8) break;
     if (!isVisible(el) || isIgnored(el)) continue;
     if (effectiveOpacity(el) < 0.02) continue;
-    const cs = getComputedStyle(el);
+    const cs = styleOf(el);
     if (cs.position !== 'fixed' && cs.position !== 'sticky') continue;
     if (cs.pointerEvents === 'none') continue;
-    const rect = el.getBoundingClientRect();
+    const rect = rawRectOf(el);
     if (rect.right <= 0 || rect.left >= vw || rect.bottom <= 0 || rect.top >= vh) continue;
     const leftAmount = Math.max(0, -rect.left);
     const rightAmount = Math.max(0, rect.right - vw);
@@ -361,9 +470,9 @@ const MEASURE = ({ width, height, profile, cssFacts }) => {
   )) {
     if (clipEvidence.length >= 8) break;
     if (!isVisible(el) || isIgnored(el)) continue;
-    const box = el.getBoundingClientRect();
+    const box = rawRectOf(el);
     if (box.right <= 0 || box.left >= vw || box.bottom <= 0) continue;
-    const cs = getComputedStyle(el);
+    const cs = styleOf(el);
     if (!clipsX(cs)) continue;
     if (el.clientWidth <= 2 || el.clientHeight <= 2) continue;
     if (cs.textOverflow === 'ellipsis') continue;
@@ -398,23 +507,28 @@ const MEASURE = ({ width, height, profile, cssFacts }) => {
     'h1, h2, h3, h4, h5, h6, p, span, a, button, label, li, td, th, figcaption, summary, dt, dd, blockquote, img, video, input, textarea, select'
   )) {
     if (clippedContent.length >= 8) break;
+    const tag = el.tagName.toLowerCase();
+    const media = tag === 'img' || tag === 'video';
+    const text = directText(el);
+    const interactive =
+      !text && !media
+        ? Boolean(
+            el.closest(
+              'a, button, input, select, textarea, summary, [role="button"], [role="link"]'
+            )
+          )
+        : false;
+    if (!text && !media && !interactive) continue;
     if (!isVisible(el) || isIgnored(el)) continue;
     if (effectiveOpacity(el) < 0.02) continue;
-    const rect = el.getBoundingClientRect();
+    const rect = rawRectOf(el);
     if (rect.right <= 0 || rect.left >= vw) continue;
     if (el.clientWidth <= 2 || el.clientHeight <= 2) continue;
-    const cs = getComputedStyle(el);
+    const cs = styleOf(el);
     if (clipsX(cs)) continue;
     if (cs.textOverflow === 'ellipsis') continue;
     if (cs.webkitLineClamp && cs.webkitLineClamp !== 'none') continue;
-    const text = directText(el);
-    const tag = el.tagName.toLowerCase();
-    const media = tag === 'img' || tag === 'video';
-    const interactive = Boolean(
-      el.closest('a, button, input, select, textarea, summary, [role="button"], [role="link"]')
-    );
-    if (!text && !media && !interactive) continue;
-    const clip = clippingAncestor(el, rect);
+    const clip = clippingAncestor(el);
     if (!clip) continue;
     clippedContent.push({
       selector: uniqueSelector(el),
@@ -450,51 +564,105 @@ const MEASURE = ({ width, height, profile, cssFacts }) => {
         continue;
       }
       if (isProseLink(el)) continue;
-      const rect = el.getBoundingClientRect();
+      const rect = rawRectOf(el);
       if (rect.width <= 0 || rect.height <= 0) continue;
       if (rect.right <= 0 || rect.left >= vw || rect.bottom <= 0) continue;
       const label = el.closest('label');
       if (label && label !== el) {
-        const labelRect = label.getBoundingClientRect();
+        const labelRect = rawRectOf(label);
         if (labelRect.width >= 43.5 && labelRect.height >= 43.5) continue;
       }
-      candidates.push({
-        el,
-        rect,
-        item: {
-          selector: uniqueSelector(el),
-          tag: el.tagName.toLowerCase(),
-          text: textOf(el, 40),
-          rect: rectOf(el),
-        },
-      });
+      candidates.push({ el, rect });
     }
 
-    const spacingPass = (candidate) => {
+    const spacingCell = 32;
+    const spacingCells = new Map();
+    const largeCandidates = [];
+    for (let index = 0; index < candidates.length; index += 1) {
+      const rect = candidates[index].rect;
+      const minX = Math.floor(rect.left / spacingCell);
+      const maxX = Math.floor(rect.right / spacingCell);
+      const minY = Math.floor(rect.top / spacingCell);
+      const maxY = Math.floor(rect.bottom / spacingCell);
+      if (maxX - minX > 4 || maxY - minY > 4) {
+        largeCandidates.push(index);
+        continue;
+      }
+      for (let x = minX; x <= maxX; x += 1) {
+        for (let y = minY; y <= maxY; y += 1) {
+          const key = x + ':' + y;
+          let bucket = spacingCells.get(key);
+          if (!bucket) {
+            bucket = [];
+            spacingCells.set(key, bucket);
+          }
+          bucket.push(index);
+        }
+      }
+    }
+
+    const spacingChecked = new Uint32Array(candidates.length);
+    let spacingQuery = 0;
+
+    const spacingPass = (candidate, candidateIndex) => {
       const cx = candidate.rect.left + candidate.rect.width / 2;
       const cy = candidate.rect.top + candidate.rect.height / 2;
-      for (const other of candidates) {
-        if (other === candidate) continue;
-        const rect = other.rect;
+      spacingQuery += 1;
+      const query = spacingQuery;
+
+      const check = (otherIndex) => {
+        if (otherIndex === candidateIndex) return true;
+        if (spacingChecked[otherIndex] === query) return true;
+        spacingChecked[otherIndex] = query;
+        const rect = candidates[otherIndex].rect;
         const ocx = rect.left + rect.width / 2;
         const ocy = rect.top + rect.height / 2;
-        if (Math.hypot(cx - ocx, cy - ocy) < 24) return false;
+        const dx = cx - ocx;
+        const dy = cy - ocy;
+        if (dx * dx + dy * dy < 576) return false;
         const nx = Math.max(rect.left, Math.min(cx, rect.right));
         const ny = Math.max(rect.top, Math.min(cy, rect.bottom));
-        if (Math.hypot(cx - nx, cy - ny) < 12) return false;
+        const rx = cx - nx;
+        const ry = cy - ny;
+        return rx * rx + ry * ry >= 144;
+      };
+
+      const minX = Math.floor((cx - 24) / spacingCell);
+      const maxX = Math.floor((cx + 24) / spacingCell);
+      const minY = Math.floor((cy - 24) / spacingCell);
+      const maxY = Math.floor((cy + 24) / spacingCell);
+      for (let x = minX; x <= maxX; x += 1) {
+        for (let y = minY; y <= maxY; y += 1) {
+          const bucket = spacingCells.get(x + ':' + y);
+          if (!bucket) continue;
+          for (const otherIndex of bucket) {
+            if (!check(otherIndex)) return false;
+          }
+        }
+      }
+      for (const otherIndex of largeCandidates) {
+        if (!check(otherIndex)) return false;
       }
       return true;
     };
 
+    const itemFor = (candidate) => ({
+      selector: uniqueSelector(candidate.el),
+      tag: candidate.el.tagName.toLowerCase(),
+      text: textOf(candidate.el, 40),
+      rect: rectOf(candidate.el),
+    });
+
     const tiny = [];
     const small = [];
-    for (const candidate of candidates) {
-      const { rect, item } = candidate;
+    for (let index = 0; index < candidates.length; index += 1) {
+      const candidate = candidates[index];
+      const { rect } = candidate;
       if (rect.width < 23.5 || rect.height < 23.5) {
-        if (spacingPass(candidate)) small.push(item);
-        else tiny.push(item);
+        if (spacingPass(candidate, index)) small.push(candidate);
+        else tiny.push(candidate);
       } else if (rect.width < 43.5 || rect.height < 43.5) {
-        small.push(item);
+        small.push(candidate);
       }
     }
 
@@ -506,7 +674,7 @@ const MEASURE = ({ width, height, profile, cssFacts }) => {
         detail:
           tiny.length +
           ' interactive element(s) are below the WCAG 2.2 target minimum of 24x24 and fail the spacing exception. Inline prose links are exempt.',
-        evidence: tiny.slice(0, 8),
+        evidence: tiny.slice(0, 8).map(itemFor),
       });
     }
     if (small.length) {
@@ -515,7 +683,7 @@ const MEASURE = ({ width, height, profile, cssFacts }) => {
         severity: 'P3',
         title: 'Tap targets under 44px',
         detail: small.length + ' interactive element(s) are below the 44x44 comfortable size.',
-        evidence: small.slice(0, 8),
+        evidence: small.slice(0, 8).map(itemFor),
       });
     }
   }
@@ -526,10 +694,10 @@ const MEASURE = ({ width, height, profile, cssFacts }) => {
     const naturalWidth = media.naturalWidth || media.videoWidth || 0;
     const naturalHeight = media.naturalHeight || media.videoHeight || 0;
     if (!naturalWidth || !naturalHeight) continue;
-    const cs = getComputedStyle(media);
+    const cs = styleOf(media);
     const fit = cs.objectFit || 'fill';
     if (fit !== 'fill') continue;
-    const rect = media.getBoundingClientRect();
+    const rect = rawRectOf(media);
     if (rect.width < 20 || rect.height < 20) continue;
     if (rect.right <= 0 || rect.left >= vw || rect.bottom <= 0) continue;
     const naturalRatio = naturalWidth / naturalHeight;
@@ -560,10 +728,10 @@ const MEASURE = ({ width, height, profile, cssFacts }) => {
   const overlayCandidates = [];
   for (const el of body.querySelectorAll('*')) {
     if (!isVisible(el) || isIgnored(el)) continue;
-    const cs = getComputedStyle(el);
+    const cs = styleOf(el);
     if (cs.position !== 'fixed' && cs.position !== 'sticky') continue;
     if (cs.pointerEvents === 'none') continue;
-    const rect = el.getBoundingClientRect();
+    const rect = rawRectOf(el);
     if (rect.right <= 0 || rect.left >= vw || rect.bottom <= 0 || rect.top >= vh) continue;
     if (rect.height >= vh * 0.4 && rect.width >= vw * 0.4) {
       overlayCandidates.push({ el, rect });
@@ -607,10 +775,10 @@ const MEASURE = ({ width, height, profile, cssFacts }) => {
         continue;
       }
       if (el.disabled || el.readOnly) continue;
-      const cs = getComputedStyle(el);
+      const cs = styleOf(el);
       const fontSize = Number.parseFloat(cs.fontSize);
       if (!Number.isFinite(fontSize) || fontSize >= 16) continue;
-      const rect = el.getBoundingClientRect();
+      const rect = rawRectOf(el);
       if (rect.right <= 0 || rect.left >= vw || rect.bottom <= 0) continue;
       zoomed.push({
         selector: uniqueSelector(el),
@@ -637,9 +805,9 @@ const MEASURE = ({ width, height, profile, cssFacts }) => {
       for (const el of body.querySelectorAll('*')) {
         if (edgeElements.length >= 5) break;
         if (!isVisible(el) || isIgnored(el)) continue;
-        const cs = getComputedStyle(el);
+        const cs = styleOf(el);
         if (cs.position !== 'fixed' && cs.position !== 'sticky') continue;
-        const rect = el.getBoundingClientRect();
+        const rect = rawRectOf(el);
         if (rect.right <= 0 || rect.left >= vw || rect.bottom <= 0) continue;
         const touchesTop = rect.top <= 2 || cs.top !== 'auto';
         const touchesBottom = rect.bottom >= vh - 2 || cs.bottom !== 'auto';
@@ -705,7 +873,7 @@ const MEASURE = ({ width, height, profile, cssFacts }) => {
       const media = tag === 'img' || tag === 'video';
       const direct = directText(el);
       if (!direct && !interactive && !media) continue;
-      const rect = el.getBoundingClientRect();
+      const rect = rawRectOf(el);
       if (rect.width <= 0 || rect.height <= 0) continue;
       if (rect.right <= 0 || rect.left >= vw || rect.bottom <= 0) continue;
       const safeX = vw * 0.05;
@@ -725,7 +893,7 @@ const MEASURE = ({ width, height, profile, cssFacts }) => {
         });
       }
       if (direct) {
-        const fontSize = Number.parseFloat(getComputedStyle(el).fontSize);
+        const fontSize = Number.parseFloat(styleOf(el).fontSize);
         if (Number.isFinite(fontSize) && fontSize < 12 && smallText.length < 8) {
           smallText.push({
             selector: uniqueSelector(el),

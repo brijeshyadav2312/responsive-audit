@@ -224,6 +224,18 @@ test('evidence selectors resolve back to the DOM', async () => {
   assert.equal(result.metrics.evidenceResolved, result.metrics.evidenceTotal);
 });
 
+test('tap target spacing stays correct with many interactive elements', async () => {
+  const result = await measure('many-targets.html');
+  const critical = result.issues.find((issue) => issue.id === 'tap-target-critical');
+  const advisory = result.issues.find((issue) => issue.id === 'tap-target-advisory');
+  assert.ok(critical);
+  assert.match(critical.detail, /^100 interactive element/);
+  assert.equal(critical.evidence.length, 8);
+  assert.ok(advisory);
+  assert.match(advisory.detail, /^100 interactive element/);
+  assert.equal(advisory.evidence.length, 8);
+});
+
 test('discovers container and range-syntax breakpoints', async () => {
   const found = await withPage('container.html', {}, async (page) => {
     const breakpoints = await discoverBreakpoints(page);

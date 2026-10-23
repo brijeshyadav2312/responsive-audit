@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Usage help and ratings
+    url: https://github.com/brijeshyadav2312/responsive-audit/issues/new?template=feedback.yml
+    about: Rate the skill, ask a usage question, or suggest a device profile.
+  - name: Report a security vulnerability
+    url: https://github.com/brijeshyadav2312/responsive-audit/security/advisories/new
+    about: Report security issues privately, not in a public issue.

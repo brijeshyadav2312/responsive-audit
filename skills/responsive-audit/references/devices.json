@@ -4,7 +4,7 @@
     "phone": ["phone-se", "phone-ios-se3", "phone-android-compact", "phone-android", "phone-ios", "phone-pixel", "phone-ios-max"],
     "foldable": ["foldable-cover", "foldable-open"],
     "tablet": ["tablet-ipad-mini", "tablet-android", "tablet-ipad-air", "tablet-ipad-pro"],
-    "mobile": ["phone", "tablet", "foldable"],
+    "mobile": ["phone-se", "phone-ios-se3", "phone-android-compact", "phone-android", "phone-ios", "phone-pixel", "phone-ios-max", "foldable-cover", "foldable-open", "tablet-ipad-mini", "tablet-android", "tablet-ipad-air", "tablet-ipad-pro"],
     "laptop": ["laptop-1280", "laptop-1366", "laptop-mac", "laptop-win-hidpi"],
     "desktop": ["desktop-1920", "desktop-2560", "ultrawide-3440"],
     "tv": ["tv-720", "tv-1080"]

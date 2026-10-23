@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Many tap targets fixture</title>
+    <style>
+      body {
+        margin: 0;
+        font: 16px sans-serif;
+      }
+      section {
+        margin: 0 0 40px;
+      }
+      .spaced {
+        display: grid;
+        grid-template-columns: repeat(5, 20px);
+        gap: 40px;
+        width: 260px;
+      }
+      .clustered {
+        display: grid;
+        grid-template-columns: repeat(17, 20px);
+        width: 340px;
+      }
+      button {
+        width: 20px;
+        height: 20px;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <section id="spaced" class="spaced"></section>
+    <section id="clustered" class="clustered"></section>
+    <script>
+      const spaced = document.getElementById('spaced');
+      const clustered = document.getElementById('clustered');
+      for (let index = 0; index < 100; index += 1) {
+        spaced.appendChild(document.createElement('button'));
+        clustered.appendChild(document.createElement('button'));
+      }
+    </script>
+  </body>
+</html>

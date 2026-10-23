@@ -41,3 +41,6 @@ jobs:
 
       - name: Run tests
         run: npm test
+
+      - name: Check publishable package contents
+        run: npm run pack:skill

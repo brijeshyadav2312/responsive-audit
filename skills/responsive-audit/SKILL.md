@@ -1,10 +1,10 @@
 ---
 name: responsive-audit
-description: Audit a web UI's responsiveness at breakpoint edges and across phone, tablet, foldable, laptop, desktop, and TV profiles using a deterministic Playwright harness. Use when asked to check responsive layout, find where a layout breaks, verify AI-generated UI, test mobile or tablet widths, check TV safe areas, or gate a PR on responsive regressions. Do not use for accessibility semantics, visual baselines, performance, or end-to-end behavior.
+description: Audit a web UI's responsiveness and responsive layout at breakpoint edges across phone, tablet, foldable, laptop, desktop, and TV profiles using a deterministic Playwright harness. Use when asked to check responsive UI, find where a responsive page or layout breaks, produce a UI responsive report or responsive audit report, verify AI-generated UI, test mobile or tablet widths, check TV safe areas, or gate a PR on responsiveness regressions. This is a responsive UI agent skill and responsive agent skill for OpenCode, Claude Code, Codex, Cursor, Copilot, Kiro, Antigravity, and Kimi Code, and it also works as a standalone CLI. Do not use for accessibility semantics, visual baselines, performance, SEO, or end-to-end behavior.
 license: MIT
 metadata:
   author: Brijesh Yadav
-  version: 0.2.0
+  version: 0.3.0
 ---
 
 # Responsive Audit
@@ -16,6 +16,7 @@ The harness discovers breakpoints from CSSOM, tests `b-1 / b / b+1`, scans devic
 ## When to use
 
 - "Check if this page is responsive", "test mobile/tablet", "find where the layout breaks"
+- "Produce a UI responsive report" or "responsive audit report" with selectors and evidence
 - After generating or editing UI with an AI coding agent
 - Before merging a frontend PR, or as a CI gate
 - When a bug report says "broken on phone" and you need the failing width and element
@@ -43,7 +44,7 @@ If the app needs a dev server, start it and confirm the URL responds before audi
 ## Workflow
 
 1. **Confirm the target.** A URL, or a file path converted to `file://`. Do not audit authenticated or production pages without explicit permission and a Playwright storage state.
-2. **Pick a mode.** `sweep` for breakpoint edges (default), `devices` for a realistic web device matrix, `all` for both. TV profiles are opt-in with `--devices tv`.
+2. **Pick a mode.** `sweep` for breakpoint edges (default), `devices` for a realistic web device matrix, `all` for both. Device runs default to `--orientations both`, so portable profiles include landscape. Use `--orientations auto` only for a faster partial pass; never describe that as full landscape coverage. TV profiles are opt-in with `--devices tv`.
 3. **Run a sample pass.** Start without `--full`; screenshots are captured for critical findings by default. The sweep reloads a fresh page at each width and uses normal motion by default. Add `--scroll` only for a revealed-state pass; add `--reduced-motion` to audit the reduced-motion variant.
 4. **Read the report.** Open `out/<timestamp>/report.md`. Findings are grouped by unique rule + selector, with every affected viewport listed.
 5. **Inspect evidence.** Open the annotated screenshots for P0/P1 findings. Do not report a finding you have not looked at.
@@ -56,11 +57,17 @@ If the app needs a dev server, start it and confirm the URL responds before audi
 # breakpoint-edge sweep
 node scripts/cli.mjs http://localhost:3000
 
-# realistic device matrix, phones only, parallel contexts
+# realistic device matrix, phones only, portrait and landscape by default
 node scripts/cli.mjs http://localhost:3000 --mode devices --devices mobile
+
+# quick natural-orientation pass; portable landscape is skipped
+node scripts/cli.mjs http://localhost:3000 --mode devices --orientations auto
 
 # both, with screenshots for every viewport
 node scripts/cli.mjs http://localhost:3000 --mode all --shots all
+
+# strict image completion only when offscreen lazy images matter
+node scripts/cli.mjs http://localhost:3000 --wait-images all
 
 # TV safe-area and D-pad checks
 node scripts/cli.mjs http://localhost:3000 --mode devices --devices tv
@@ -86,10 +93,12 @@ Modes:
 | Mode | What it tests | Best for |
 |------|---------------|----------|
 | `sweep` | discovered breakpoint edges plus representative widths, each on a fresh page | finding the exact failing pixel |
-| `devices` | web profiles by default (20) with UA, DPR, touch, orientation | realistic phone/tablet/laptop/desktop coverage |
+| `devices` | web profiles by default (33) with UA, DPR, touch, and both orientations where applicable | realistic phone/tablet/laptop/desktop coverage |
 | `all` | both sets, deduplicated in the report | a release check |
 
 `web` includes Android phone/tablet browsers. TV is a separate target: use `--devices tv` or `--devices all` only when the page must work on TVs.
+
+Image waiting defaults to `visible`: eager and in-viewport images are awaited, while offscreen `loading="lazy"` images are skipped because they cannot affect the current viewport. Use `--wait-images all` for strict completion or `--wait-images none` for the fastest pass. If the finding depends on a lazy image, run `--scroll --wait-images all`.
 
 ## Output contract
 
@@ -97,6 +106,8 @@ Always report:
 
 - target URL, timestamp, engine, and mode
 - discovered breakpoints, sweep widths, and device profiles tested
+- portrait/landscape counts, including whether every portable profile had a landscape pass
+- duration, discovery time, audit time, and the slowest target
 - overall score and grade (A/B/C/D), plus unique findings vs occurrences
 - the worst viewport and why
 - findings grouped by severity, each with `rule`, `selector`, `rect`, affected viewports, and screenshot path
@@ -152,6 +163,7 @@ See `references/platforms.md` for fixes and `references/limits.md` for what emul
 - Ask before auditing authenticated or production URLs.
 - Do not generate more than about 30 screenshots in one run; `--shots critical` is the default.
 - Do not run `--mode all --shots all` on a large site without warning about runtime and disk use.
+- Do not claim landscape coverage if the report shows portable landscape as partial.
 - Do not claim a fix works without a re-run.
 - Do not commit generated `out/` artifacts unless asked.
 

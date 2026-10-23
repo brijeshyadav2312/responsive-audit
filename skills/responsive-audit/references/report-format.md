@@ -13,12 +13,13 @@ Top level:
 | `generatedAt` | ISO string | run timestamp |
 | `engine` | `{ name, channel }` | engine actually launched, and Chromium channel if any |
 | `mode` | `sweep` \| `devices` \| `all` | requested mode |
-| `options` | object | `scroll`, `fullPage`, `shots`, `reducedMotion`, `settle`, and `timeout` used for the run |
+| `options` | object | `scroll`, `fullPage`, `shots`, `reducedMotion`, `settle`, `timeout`, `waitImages`, `devices`, `orientations`, and `concurrency` used for the run |
 | `breakpoints` | number[] \| null | discovered widths, or null when `--widths` was used |
 | `widths` | number[] | sweep widths tested (empty in device-only mode) |
-| `profilesTested` | object[] | device profiles tested (empty in sweep-only mode) |
+| `profilesTested` | object[] | device profiles tested with orientation (empty in sweep-only mode) |
+| `timings` | object | `launchMs`, `discoveryMs`, `auditMs`, `totalMs`, and `slowest` (`label`, `kind`, `ms`) |
 | `css` | object | CSS facts: sheets, rules, bytes, vh count, safe-area, focus, containers |
-| `results` | object[] | one entry per width or device profile |
+| `results` | object[] | one entry per width or device profile, plus `durationMs` |
 | `counts` | `{ P0, P1, P2, P3 }` | occurrence counts |
 | `issueCount` | number | total occurrences |
 | `uniqueCount` | number | unique rule + selector findings |
@@ -77,7 +78,7 @@ Finding object:
 ## Markdown sections
 
 1. Header: target, title, timestamp, grade, severity counts, worst viewport.
-2. Coverage: engine, mode, scroll pass, reduced-motion preference, breakpoints, sweep widths, device profiles, CSS facts.
+2. Coverage: engine, mode, scroll pass, reduced-motion preference, breakpoints, sweep widths, device profiles, orientation coverage, timings, and CSS facts.
 3. Findings: unique findings table followed by per-rule evidence.
 4. Sweep results: width, score, grade, severity counts, screenshot link.
 5. Device results: profile, size, orientation, score, grade, severity counts, screenshot link.

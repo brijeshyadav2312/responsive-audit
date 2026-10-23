@@ -1,10 +1,33 @@
 {
   "name": "responsive-audit-repo",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
-  "description": "Repository for the responsive-audit Agent Skill and deterministic responsive-layout CLI.",
+  "description": "Responsive UI agent skill and deterministic CLI that audits responsive pages at breakpoint edges across phone, tablet, foldable, laptop, desktop, and TV profiles.",
   "license": "MIT",
+  "keywords": [
+    "responsive-design",
+    "responsive-ui",
+    "responsive-layout",
+    "responsive-page",
+    "ui-responsiveness",
+    "responsive-audit",
+    "responsive-audit-report",
+    "ui-responsive-report",
+    "agent-skill",
+    "agent-skills",
+    "ai-agent",
+    "playwright",
+    "breakpoint-testing",
+    "device-emulation",
+    "mobile-testing",
+    "tablet-testing",
+    "foldable",
+    "tv",
+    "qa",
+    "cli",
+    "web-development"
+  ],
   "author": {
     "name": "Brijesh Yadav",
     "email": "88343913+brijeshyadav2312@users.noreply.github.com"
@@ -29,6 +52,8 @@
     "validate": "npm --workspace responsive-audit run validate",
     "validate:skill": "npx --yes skills-ref validate skills/responsive-audit",
     "test": "npm --workspace responsive-audit test",
+    "pack:skill": "npm pack --workspace responsive-audit --dry-run",
+    "publish:skill": "npm publish --workspace responsive-audit --access public",
     "start": "node skills/responsive-audit/scripts/cli.mjs"
   },
   "engines": {

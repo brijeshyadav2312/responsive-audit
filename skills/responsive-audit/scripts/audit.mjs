@@ -13,6 +13,11 @@ const KILL_ANIMATIONS =
   '*,*::before,*::after{animation-duration:0s!important;animation-delay:0s!important;transition-duration:0s!important;scroll-behavior:auto!important}';
 
 const MODES = ['sweep', 'devices', 'all'];
+const IMAGE_WAIT_MARGIN = 200;
+const IMAGE_WAIT_TIMEOUT = 1200;
+const FONT_WAIT_TIMEOUT = 1500;
+
+export const WAIT_IMAGES = ['visible', 'all', 'none'];
 
 async function annotate(page, selectors) {
   return page.evaluate(
@@ -71,20 +76,63 @@ async function revealPage(page) {
     .catch(() => {});
 }
 
-async function preparePage(page, target, { timeout, settle, scroll }) {
+export async function waitForImages(page, mode = 'visible', { timeout = IMAGE_WAIT_TIMEOUT } = {}) {
+  const selected = WAIT_IMAGES.includes(mode) ? mode : 'visible';
+  if (selected === 'none') return;
+
+  await page
+    .waitForFunction(
+      ({ selectedMode, margin }) => {
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const metrics = (image) => {
+          const rect = image.getBoundingClientRect();
+          return {
+            rect,
+            hasBox: rect.width > 0 || rect.height > 0,
+            nearViewport:
+              rect.bottom >= -margin &&
+              rect.top <= viewportHeight + margin &&
+              rect.right >= -margin &&
+              rect.left <= viewportWidth + margin,
+          };
+        };
+
+        return Array.from(document.images).every((image) => {
+          if (image.complete) return true;
+          if (selectedMode === 'all') return false;
+          const box = metrics(image);
+          if (!box.hasBox) return true;
+          return image.loading === 'lazy' && !box.nearViewport;
+        });
+      },
+      { selectedMode: selected, margin: IMAGE_WAIT_MARGIN },
+      { timeout: Math.max(50, timeout), polling: 100 }
+    )
+    .catch(() => {});
+}
+
+async function preparePage(page, target, { timeout, settle, scroll, waitImages }) {
   page.setDefaultTimeout(timeout);
   await page.goto(target, { waitUntil: 'load', timeout });
   await page.addStyleTag({ content: KILL_ANIMATIONS }).catch(() => {});
-  await page.waitForTimeout(settle);
-  await page.evaluate(() => document.fonts && document.fonts.ready).catch(() => {});
-  if (scroll) await revealPage(page);
   await page
-    .waitForFunction(
-      () => Array.from(document.images).every((image) => image.complete),
-      undefined,
-      { timeout: Math.min(3000, timeout) }
+    .evaluate(
+      (limit) =>
+        document.fonts
+          ? Promise.race([
+              document.fonts.ready,
+              new Promise((resolve) => setTimeout(resolve, limit)),
+            ])
+          : undefined,
+      Math.min(FONT_WAIT_TIMEOUT, timeout)
     )
     .catch(() => {});
+  await waitForImages(page, waitImages, {
+    timeout: Math.min(waitImages === 'all' ? 3000 : IMAGE_WAIT_TIMEOUT, timeout),
+  });
+  if (scroll) await revealPage(page);
+  await page.waitForTimeout(settle);
 }
 
 function selectorsFor(issues) {
@@ -156,147 +204,115 @@ function profileSummary(profile) {
   };
 }
 
-async function runSweep(browser, target, options, { discovered, cssFacts }) {
-  const widths =
-    options.widths && options.widths.length
-      ? options.widths
-      : buildWidths(discovered, { max: options.maxWidths ?? 28 });
+async function runSweepJob(browser, target, options, width, cssFacts) {
+  const height = viewportHeightForWidth(width);
+  const contextOptionsValue = {
+    viewport: { width, height },
+    screen: { width, height },
+    deviceScaleFactor: 1,
+    hasTouch: false,
+    locale: 'en-US',
+    timezoneId: 'UTC',
+    colorScheme: 'light',
+    reducedMotion: options.reducedMotion || 'no-preference',
+  };
+  if (options.storageState) contextOptionsValue.storageState = options.storageState;
 
-  if (!widths.length) {
-    throw new Error('No widths to test. Pass --widths or audit a page with readable CSS.');
-  }
+  const context = await browser.newContext(contextOptionsValue);
+  try {
+    const page = await context.newPage();
+    await preparePage(page, target, options);
 
-  const shots = options.shots || 'critical';
-  const runDir = options.runDir;
+    const measurement = await measureViewport(page, {
+      width,
+      height,
+      settle: 0,
+      cssFacts,
+      resize: false,
+    });
 
-  const results = await runPool(widths, options.concurrency ?? 4, async (width) => {
-    const height = viewportHeightForWidth(width);
-    const contextOptionsValue = {
-      viewport: { width, height },
-      screen: { width, height },
-      deviceScaleFactor: 1,
-      hasTouch: false,
-      locale: 'en-US',
-      timezoneId: 'UTC',
-      colorScheme: 'light',
-      reducedMotion: options.reducedMotion || 'no-preference',
-    };
-    if (options.storageState) contextOptionsValue.storageState = options.storageState;
-
-    const context = await browser.newContext(contextOptionsValue);
-    try {
-      const page = await context.newPage();
-      await preparePage(page, target, options);
-
-      const measurement = await measureViewport(page, {
-        width,
-        height,
-        settle: options.settle,
-        cssFacts,
-        resize: false,
-      });
-
-      let screenshot = null;
-      if (wantsShot(measurement.issues, shots)) {
-        const documentHeight = await pageHeight(page);
-        const fullPage = options.fullPage === true || documentHeight <= 3000;
-        const file = 'shots/width-' + width + '.png';
-        try {
-          await capture(page, join(runDir, file), {
-            fullPage,
-            selectors: selectorsFor(measurement.issues),
-          });
-          screenshot = file;
-        } catch {
-          screenshot = null;
-        }
+    let screenshot = null;
+    if (wantsShot(measurement.issues, options.shots || 'critical')) {
+      const documentHeight = await pageHeight(page);
+      const fullPage = options.fullPage === true || documentHeight <= 3000;
+      const file = 'shots/width-' + width + '.png';
+      try {
+        await capture(page, join(options.runDir, file), {
+          fullPage,
+          selectors: selectorsFor(measurement.issues),
+        });
+        screenshot = file;
+      } catch {
+        screenshot = null;
       }
-
-      return {
-        kind: 'sweep',
-        label: width + 'px',
-        width,
-        height,
-        score: scoreWidth(measurement.issues),
-        metrics: measurement.metrics,
-        issues: measurement.issues,
-        screenshot,
-      };
-    } finally {
-      await context.close();
     }
-  });
 
-  return { widths, results };
+    return {
+      kind: 'sweep',
+      label: width + 'px',
+      width,
+      height,
+      score: scoreWidth(measurement.issues),
+      metrics: measurement.metrics,
+      issues: measurement.issues,
+      screenshot,
+    };
+  } finally {
+    await context.close();
+  }
 }
 
-async function runDevices(browser, target, options, { cssFacts, engine }) {
-  const profiles = getProfiles({
-    group: options.devices || 'web',
-    orientations: options.orientations || 'auto',
+async function runDeviceJob(browser, target, options, profile, cssFacts, engine) {
+  const contextOptionsValue = contextOptions(profile, {
+    engine,
+    reducedMotion: options.reducedMotion || 'no-preference',
   });
+  if (options.storageState) contextOptionsValue.storageState = options.storageState;
 
-  if (!profiles.length) {
-    throw new Error('No device profiles matched group "' + options.devices + '".');
-  }
+  const context = await browser.newContext(contextOptionsValue);
+  try {
+    const page = await context.newPage();
+    await preparePage(page, target, options);
 
-  const shots = options.shots || 'critical';
-  const runDir = options.runDir;
-
-  const results = await runPool(profiles, options.concurrency ?? 4, async (profile) => {
-    const contextOptionsValue = contextOptions(profile, {
-      engine,
-      reducedMotion: options.reducedMotion || 'no-preference',
+    const measurement = await measureViewport(page, {
+      width: profile.width,
+      height: profile.height,
+      settle: 0,
+      profile,
+      cssFacts,
+      resize: false,
     });
-    if (options.storageState) contextOptionsValue.storageState = options.storageState;
 
-    const context = await browser.newContext(contextOptionsValue);
-    try {
-      const page = await context.newPage();
-      await preparePage(page, target, options);
-
-      const measurement = await measureViewport(page, {
-        width: profile.width,
-        height: profile.height,
-        settle: options.settle,
-        profile,
-        cssFacts,
-        resize: false,
-      });
-
-      let screenshot = null;
-      if (wantsShot(measurement.issues, shots)) {
-        const documentHeight = await pageHeight(page);
-        const fullPage = options.fullPage === true || documentHeight <= 3000;
-        const file = 'shots/' + profile.name + '.png';
-        try {
-          await capture(page, join(runDir, file), {
-            fullPage,
-            selectors: selectorsFor(measurement.issues),
-          });
-          screenshot = file;
-        } catch {
-          screenshot = null;
-        }
+    let screenshot = null;
+    if (wantsShot(measurement.issues, options.shots || 'critical')) {
+      const documentHeight = await pageHeight(page);
+      const fullPage = options.fullPage === true || documentHeight <= 3000;
+      const file = 'shots/' + profile.name + '.png';
+      try {
+        await capture(page, join(options.runDir, file), {
+          fullPage,
+          selectors: selectorsFor(measurement.issues),
+        });
+        screenshot = file;
+      } catch {
+        screenshot = null;
       }
-
-      return {
-        kind: 'device',
-        label: profile.name,
-        width: profile.width,
-        height: profile.height,
-        profile: profileSummary(profile),
-        score: scoreWidth(measurement.issues),
-        metrics: measurement.metrics,
-        issues: measurement.issues,
-        screenshot,
-      };
-    } finally {
-      await context.close();
     }
-  });
 
-  return { profiles, results };
+    return {
+      kind: 'device',
+      label: profile.name,
+      width: profile.width,
+      height: profile.height,
+      profile: profileSummary(profile),
+      score: scoreWidth(measurement.issues),
+      metrics: measurement.metrics,
+      issues: measurement.issues,
+      screenshot,
+    };
+  } finally {
+    await context.close();
+  }
 }
 
 export async function runAudit(target, options = {}) {
@@ -313,13 +329,32 @@ export async function runAudit(target, options = {}) {
   const settle = options.settle ?? 350;
   const timeout = options.timeout ?? 30000;
   const reducedMotion = options.reducedMotion || 'no-preference';
-  const settings = { ...options, settle, timeout, reducedMotion, runDir };
+  const waitImages = WAIT_IMAGES.includes(options.waitImages) ? options.waitImages : 'visible';
+  const orientations = options.orientations || 'both';
+  const deviceGroup = options.devices || 'web';
+  const requestedConcurrency = Number(options.concurrency ?? 4);
+  const concurrency = Number.isFinite(requestedConcurrency)
+    ? Math.max(1, Math.min(8, Math.floor(requestedConcurrency)))
+    : 4;
+  const settings = {
+    ...options,
+    settle,
+    timeout,
+    reducedMotion,
+    waitImages,
+    orientations,
+    devices: deviceGroup,
+    concurrency,
+    runDir,
+  };
 
+  const startedAt = performance.now();
   const launched = await launchBrowser({
     engine: options.engine || 'chromium',
     channel: options.channel,
     headed: options.headed,
   });
+  const launchMs = Math.round(performance.now() - startedAt);
   const { browser } = launched;
 
   try {
@@ -337,35 +372,69 @@ export async function runAudit(target, options = {}) {
     let title = null;
 
     try {
+      const discoveryStartedAt = performance.now();
       sweepPage = await discoveryContext.newPage();
-      await preparePage(sweepPage, target, settings);
+      await preparePage(sweepPage, target, {
+        ...settings,
+        waitImages: 'none',
+        scroll: false,
+      });
       title = await sweepPage.title().catch(() => null);
       const detailed = await discoverBreakpointsDetailed(sweepPage);
       discovered = detailed.breakpoints;
       cssFacts = await scanCss(sweepPage);
+      const discoveryMs = Math.round(performance.now() - discoveryStartedAt);
 
-      let widths = [];
-      let sweepResults = [];
+      const widths =
+        mode === 'sweep' || mode === 'all'
+          ? options.widths && options.widths.length
+            ? options.widths
+            : buildWidths(discovered, { max: options.maxWidths ?? 28 })
+          : [];
 
-      if (mode === 'sweep' || mode === 'all') {
-        const sweep = await runSweep(browser, target, settings, { discovered, cssFacts });
-        widths = sweep.widths;
-        sweepResults = sweep.results;
+      if ((mode === 'sweep' || mode === 'all') && !widths.length) {
+        throw new Error('No widths to test. Pass --widths or audit a page with readable CSS.');
       }
 
-      let profiles = [];
-      let deviceResults = [];
+      const profiles =
+        mode === 'devices' || mode === 'all'
+          ? getProfiles({ group: deviceGroup, orientations })
+          : [];
 
-      if (mode === 'devices' || mode === 'all') {
-        const deviceRun = await runDevices(browser, target, settings, {
-          cssFacts,
-          engine: launched.engine,
-        });
-        profiles = deviceRun.profiles;
-        deviceResults = deviceRun.results;
+      if ((mode === 'devices' || mode === 'all') && !profiles.length) {
+        throw new Error('No device profiles matched group "' + deviceGroup + '".');
       }
 
-      const results = [...sweepResults, ...deviceResults];
+      const jobs = [
+        ...widths.map((width) => ({ kind: 'sweep', width })),
+        ...profiles.map((profile) => ({ kind: 'device', profile })),
+      ];
+
+      const auditStartedAt = performance.now();
+      const results = await runPool(jobs, concurrency, async (job) => {
+        const jobStartedAt = performance.now();
+        const result =
+          job.kind === 'sweep'
+            ? await runSweepJob(browser, target, settings, job.width, cssFacts)
+            : await runDeviceJob(
+                browser,
+                target,
+                settings,
+                job.profile,
+                cssFacts,
+                launched.engine
+              );
+        result.durationMs = Math.round(performance.now() - jobStartedAt);
+        return result;
+      });
+      const auditMs = Math.round(performance.now() - auditStartedAt);
+
+      const slowest = results.reduce((current, result) => {
+        if (!current || result.durationMs > current.ms) {
+          return { label: result.label, kind: result.kind, ms: result.durationMs };
+        }
+        return current;
+      }, null);
 
       const report = {
         target,
@@ -380,6 +449,17 @@ export async function runAudit(target, options = {}) {
           reducedMotion,
           settle,
           timeout,
+          waitImages,
+          devices: deviceGroup,
+          orientations,
+          concurrency,
+        },
+        timings: {
+          launchMs,
+          discoveryMs,
+          auditMs,
+          totalMs: Math.round(performance.now() - startedAt),
+          slowest,
         },
         breakpoints: options.widths && options.widths.length ? null : discovered,
         widths,

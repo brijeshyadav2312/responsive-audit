@@ -62,6 +62,40 @@ test('both orientations expands portable profiles only', () => {
   assert.equal(getProfiles({ group: 'desktop', orientations: 'both' }).length, 3);
 });
 
+test('default web coverage includes every portable landscape profile', () => {
+  const profiles = getProfiles({ group: 'web', orientations: 'both' });
+  assert.equal(profiles.length, 33);
+  assert.equal(profiles.filter((profile) => profile.orientation === 'landscape').length, 20);
+  assert.equal(
+    profiles.filter(
+      (profile) =>
+        ['phone', 'tablet', 'foldable'].includes(profile.group) &&
+        profile.orientation === 'landscape'
+    ).length,
+    13
+  );
+  assert.ok(profiles.some((profile) => profile.name === 'phone-ios-landscape'));
+  assert.ok(profiles.some((profile) => profile.name === 'tablet-ipad-pro-landscape'));
+});
+
+test('all group expands TV profiles in both orientations without duplicating them', () => {
+  const profiles = getProfiles({ group: 'all', orientations: 'both' });
+  assert.equal(profiles.length, 35);
+  assert.equal(profiles.filter((profile) => profile.orientation === 'landscape').length, 22);
+  assert.equal(
+    profiles.filter((profile) => profile.orientation === 'portrait').length,
+    13
+  );
+  assert.equal(new Set(profiles.map((profile) => profile.name)).size, profiles.length);
+});
+
+test('auto orientation uses the faster natural-orientation matrix', () => {
+  const profiles = getProfiles({ group: 'web', orientations: 'auto' });
+  assert.equal(profiles.length, 20);
+  assert.equal(profiles.filter((profile) => profile.orientation === 'landscape').length, 7);
+  assert.ok(!profiles.some((profile) => profile.name.endsWith('-landscape')));
+});
+
 test('rejects unknown groups and orientations', () => {
   assert.throws(() => getProfiles({ group: 'watch' }), /Unknown device group/);
   assert.throws(() => getProfiles({ group: 'all', orientations: 'sideways' }), /Unknown orientation/);

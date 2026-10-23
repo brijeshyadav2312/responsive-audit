@@ -17,6 +17,16 @@ function escapeCell(value) {
   return String(value).replace(/\|/g, '\\|').replace(/\n/g, ' ');
 }
 
+function seconds(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 'n/a';
+  return (number / 1000).toFixed(1) + 's';
+}
+
+function baseProfileName(name) {
+  return String(name).replace(/-(landscape|portrait)$/, '');
+}
+
 function gradeOf(score) {
   if (score >= 90) return 'A';
   if (score >= 75) return 'B';
@@ -73,6 +83,72 @@ function coverageLines(report) {
           ')'
         : 'none')
   );
+  if (report.profilesTested.length) {
+    const landscape = report.profilesTested.filter(
+      (profile) => profile.orientation === 'landscape'
+    ).length;
+    const portrait = report.profilesTested.filter(
+      (profile) => profile.orientation === 'portrait'
+    ).length;
+    const portable = report.profilesTested.filter((profile) =>
+      ['phone', 'tablet', 'foldable'].includes(profile.group)
+    );
+    lines.push(
+      '- Device orientation: ' +
+        landscape +
+        ' landscape, ' +
+        portrait +
+        ' portrait' +
+        (report.options && report.options.orientations
+          ? ' (requested: ' + report.options.orientations + ')'
+          : '')
+    );
+    if (portable.length) {
+      const portableBases = new Set(portable.map((profile) => baseProfileName(profile.name)));
+      const landscapeBases = new Set(
+        portable
+          .filter((profile) => profile.orientation === 'landscape')
+          .map((profile) => baseProfileName(profile.name))
+      );
+      const requested = report.options && report.options.orientations;
+      const missing = portableBases.size - landscapeBases.size;
+      const note =
+        missing > 0
+          ? requested === 'both'
+            ? ' - partial; verify the device matrix'
+            : ' - partial by request; use --orientations both for full coverage'
+          : '';
+      lines.push(
+        '- Portable landscape: ' +
+          landscapeBases.size +
+          '/' +
+          portableBases.size +
+          note
+      );
+    }
+  }
+  if (report.timings) {
+    lines.push(
+      '- Duration: ' +
+        seconds(report.timings.totalMs) +
+        ' total, ' +
+        seconds(report.timings.discoveryMs) +
+        ' discovery, ' +
+        seconds(report.timings.auditMs) +
+        ' audit, ' +
+        seconds(report.timings.launchMs) +
+        ' launch'
+    );
+    if (report.timings.slowest) {
+      lines.push(
+        '- Slowest target: ' +
+          report.timings.slowest.label +
+          ' (' +
+          seconds(report.timings.slowest.ms) +
+          ')'
+      );
+    }
+  }
   lines.push(
     '- Stylesheets read: ' +
       (css.sheets ?? 0) +
@@ -284,7 +360,7 @@ function limitsLines(report) {
   return lines;
 }
 
-function toMarkdown(report) {
+export function toMarkdown(report) {
   const lines = [];
   lines.push('# Responsive audit - ' + report.target);
   lines.push('');
@@ -363,7 +439,27 @@ export function printSummary(report, runDir) {
           : 'none discovered')
   );
   if (report.profilesTested.length) {
-    console.log('  devices           ' + report.profilesTested.length + ' profiles');
+    const landscape = report.profilesTested.filter(
+      (profile) => profile.orientation === 'landscape'
+    ).length;
+    console.log(
+      '  devices           ' +
+        report.profilesTested.length +
+        ' profiles (' +
+        landscape +
+        ' landscape)'
+    );
+  }
+  if (report.timings) {
+    console.log(
+      '  duration          ' +
+        seconds(report.timings.totalMs) +
+        ' (discovery ' +
+        seconds(report.timings.discoveryMs) +
+        ', audit ' +
+        seconds(report.timings.auditMs) +
+        ')'
+    );
   }
   console.log('  report            ' + join(runDir, 'report.md'));
 

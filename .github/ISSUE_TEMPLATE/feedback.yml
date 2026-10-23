@@ -1,0 +1,53 @@
+name: Feedback and rating
+description: Rate the responsive-audit skill and share what worked or what should improve.
+title: "[Feedback]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for trying responsive-audit. Ratings help other developers decide whether
+        the skill fits their workflow. Please remove any confidential URLs or screenshots.
+  - type: dropdown
+    id: rating
+    attributes:
+      label: Rating
+      description: How useful was responsive-audit for your task?
+      options:
+        - "5 - would recommend"
+        - "4"
+        - "3"
+        - "2"
+        - "1 - not useful"
+    validations:
+      required: true
+  - type: dropdown
+    id: usage
+    attributes:
+      label: How did you use it?
+      options:
+        - Agent skill
+        - Standalone CLI
+        - CI gate
+        - Agent skill and CLI
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      placeholder: "0.3.0"
+  - type: textarea
+    id: worked
+    attributes:
+      label: What worked well?
+      description: Reports, breakpoint discovery, device coverage, screenshots, exit codes.
+  - type: textarea
+    id: improve
+    attributes:
+      label: What should improve?
+      description: False positives, missing devices, report clarity, install friction, docs.
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: "Node 22, Windows 11, Chromium 126, localhost Vite app"

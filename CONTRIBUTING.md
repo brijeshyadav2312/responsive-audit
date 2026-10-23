@@ -41,3 +41,50 @@ expected.
 - Keep documentation and report output ASCII-only.
 - Describe the behavior change, the test evidence, and any remaining platform limits in
   the pull request.
+
+## Repository discoverability
+
+GitHub search, npm search, and agent skill registries are the main discovery paths. Keep
+the repository description, topics, package description, keywords, and README search
+terms aligned when the project scope changes.
+
+Recommended GitHub description:
+
+```text
+Responsive UI agent skill + CLI: audit responsive pages at breakpoint edges across phone,
+tablet, foldable, laptop, desktop, and TV profiles with deterministic UI responsive reports.
+```
+
+Recommended GitHub topics:
+
+```text
+responsive-design, responsive-ui, responsive-layout, responsive-page, ui-responsiveness,
+responsive-audit, responsive-audit-report, ui-responsive-report, agent-skill, agent-skills,
+ai-agent, playwright, breakpoint-testing, device-emulation, mobile-testing, tablet-testing,
+foldable, tv-testing, safe-area, qa, cli
+```
+
+With the GitHub CLI installed and authenticated:
+
+```bash
+gh repo edit brijeshyadav2312/responsive-audit \
+  --description "Responsive UI agent skill + CLI: audit responsive pages at breakpoint edges across phone, tablet, foldable, laptop, desktop, and TV profiles with deterministic UI responsive reports." \
+  --add-topic responsive-design,responsive-ui,responsive-layout,responsive-page,ui-responsiveness,responsive-audit,responsive-audit-report,ui-responsive-report,agent-skill,agent-skills,ai-agent,playwright,breakpoint-testing,device-emulation,mobile-testing,tablet-testing,foldable,tv-testing,safe-area,qa,cli
+```
+
+Enable Discussions for ratings and usage questions:
+
+```bash
+gh api -X PATCH repos/brijeshyadav2312/responsive-audit -F has_discussions=true
+```
+
+## Release checklist
+
+1. Update the version in `package.json`, `skills/responsive-audit/package.json`,
+   `skills/responsive-audit/SKILL.md`, and `skills/responsive-audit/evals/evals.json`.
+2. Add a CHANGELOG entry.
+3. Run `npm run validate`, `npm run validate:skill`, `npm test`, and `npm run pack:skill`.
+4. Confirm the npm package name is still available: `npm view responsive-audit version`.
+5. Run the demo audits and inspect `report.md` for regressions.
+6. Publish with `npm run publish:skill`, then tag and push the release.
+7. Re-check the README badges and the GitHub repository topics.

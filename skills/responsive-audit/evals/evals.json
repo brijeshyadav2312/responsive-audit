@@ -1,6 +1,6 @@
 {
   "skill": "responsive-audit",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "cases": [
     {
       "id": "trigger-breakpoint-search",
@@ -43,6 +43,31 @@
       "should_trigger": true
     },
     {
+      "id": "trigger-responsive-ui-skill",
+      "prompt": "Which responsive UI skill should I use to audit this page?",
+      "should_trigger": true
+    },
+    {
+      "id": "trigger-responsive-ui-agent-skill",
+      "prompt": "Use a responsive UI agent skill to check my landing page on phones and tablets.",
+      "should_trigger": true
+    },
+    {
+      "id": "trigger-ui-responsive-report",
+      "prompt": "Generate a UI responsive report for localhost:3000.",
+      "should_trigger": true
+    },
+    {
+      "id": "trigger-responsive-audit-report",
+      "prompt": "I need a responsive audit report for my landing page before release.",
+      "should_trigger": true
+    },
+    {
+      "id": "trigger-ui-responsiveness",
+      "prompt": "Check UI responsiveness across phone, tablet, and desktop widths.",
+      "should_trigger": true
+    },
+    {
       "id": "non-trigger-a11y",
       "prompt": "Fix my site's alt text and color contrast.",
       "should_trigger": false
@@ -75,6 +100,26 @@
     {
       "id": "non-trigger-dark-mode",
       "prompt": "Check whether dark mode text meets contrast requirements.",
+      "should_trigger": false
+    },
+    {
+      "id": "non-trigger-seo",
+      "prompt": "Improve my site's SEO and meta tags.",
+      "should_trigger": false
+    },
+    {
+      "id": "non-trigger-responsive-email",
+      "prompt": "Make this email template render correctly in Outlook.",
+      "should_trigger": false
+    },
+    {
+      "id": "non-trigger-native-app",
+      "prompt": "Fix the responsive grid in my SwiftUI iOS app.",
+      "should_trigger": false
+    },
+    {
+      "id": "non-trigger-debugger-breakpoint",
+      "prompt": "Add a debugger breakpoint in VS Code for this function.",
       "should_trigger": false
     }
   ]
